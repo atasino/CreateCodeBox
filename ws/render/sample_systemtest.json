@@ -1,0 +1,15 @@
+{
+  "project": "Simple budget",
+  "rows": [
+    {"id":"T-IO-01-N1","io":"IO-01","kind":"N","state":"normal","what":"Type \"lunch 8\" and press \"Add\"","expected":"The list gets one more row and this month's total goes up by 8","route":"ST","reason":"","status":"pass","by":"user","evidence":"The row was added and the total went up by 8","shot":"shots/IO-01-N1.png","at":"2026-10-30 10:12"},
+    {"id":"T-IO-01-B1","io":"IO-01","kind":"B","state":"empty","what":"Press \"Add\" with the amount left empty","expected":"\"Enter an amount\" appears and the list does not grow","route":"ST","reason":"","status":"pass","by":"user","evidence":"A red message appeared and the list did not grow","shot":"shots/IO-01-B1.png","at":"2026-10-30 10:15"},
+    {"id":"T-IO-01-F1","io":"IO-01","kind":"F","state":"error","what":"Type \"abc\" as the amount and press \"Add\"","expected":"A red message \"Enter a number\" appears and what was typed stays","route":"ST","reason":"","status":"pass","by":"user","evidence":"A red message appeared and \"abc\" stayed","shot":"shots/IO-01-F1.png","at":"2026-10-30 10:18"},
+    {"id":"T-IO-02-N1","io":"IO-02","kind":"N","state":"normal","what":"Enter 3 records, then open the monthly total screen","expected":"The total of the 3 records shows as one big number","route":"ST","reason":"","status":"pass","by":"user","evidence":"The total was the sum of the 3 records","shot":"shots/IO-02-N1.png","at":"2026-10-30 10:25"},
+    {"id":"T-IO-02-B1","io":"IO-02","kind":"B","state":"empty","what":"Open the monthly total screen for a month with no records","expected":"\"No spending yet\" appears and the total is 0","route":"ST","reason":"","status":"todo","by":"","evidence":"","shot":"","at":""},
+    {"id":"T-IO-02-F1","io":"IO-02","kind":"F","state":"error","what":"Enter a very large amount (99999999999)","expected":"\"Too large\" appears and nothing is saved","route":"ST","reason":"","status":"todo","by":"","evidence":"","shot":"","at":""},
+    {"id":"T-IO-03-N1","io":"IO-03","kind":"N","state":"normal","what":"Enter 2 records, close the page, and open it again","expected":"The 2 records are still on the list","route":"ST","reason":"","status":"fail","by":"user","evidence":"After reopening, only 1 record was left","shot":"shots/IO-03-N1.png","at":"2026-10-30 10:40"},
+    {"id":"T-IO-03-F1","io":"IO-03","kind":"F","state":"error","what":"Turn off saving in the browser and press \"Add\"","expected":"\"Could not save\" appears and the record is not added to the list","route":"ST","reason":"","status":"todo","by":"","evidence":"","shot":"","at":""},
+    {"id":"T-IO-04-N1","io":"IO-04","kind":"N","state":"normal","what":"Press \"Delete\" on one row and choose \"Yes\" to confirm","expected":"Only that row goes away and the total goes down by that amount","route":"ST","reason":"","status":"todo","by":"","evidence":"","shot":"","at":""},
+    {"id":"T-IO-04-B1","io":"IO-04","kind":"B","state":"empty","what":"Delete the last row","expected":"The screen changes to \"No spending yet\"","route":"ST","reason":"","status":"todo","by":"","evidence":"","shot":"","at":""}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "project": "Simple budget",
+  "rows": [
+    {"id":"IO-01","kind":"screen","name":"Screen to enter spending","dir":"in","party":"User","example":"Lunch 8.50","required":true,"failure":"If the amount is empty, say so in red and do not save","prd":"FR-01","screen":"SC-01"},
+    {"id":"IO-02","kind":"screen","name":"Screen to set a monthly budget","dir":"in","party":"User","example":"Food 400","required":false,"failure":"If it is not a number, ask the user to enter it again","prd":"FR-07","screen":"SC-04"},
+    {"id":"IO-03","kind":"file","name":"Bring in a bank statement","dir":"in","party":"Bank statement file","example":"statement_202610.csv","required":false,"failure":"Skip rows that cannot be read and show how many were skipped","prd":"FR-02","screen":"SC-02"},
+    {"id":"IO-04","kind":"api","name":"Fetch the exchange rate","dir":"in","party":"Exchange rate service","example":"1 USD = 151.2 JPY","required":false,"failure":"If it cannot be fetched, use the last value and say so","prd":"FR-05","screen":""},
+    {"id":"IO-05","kind":"scheduled","name":"Make last month's total on the 1st of each month","dir":"in","party":"Clock (the 1st of each month, 6:00)","example":"2026-11-01 06:00","required":true,"failure":"If it did not run, make it the next time the app is opened","prd":"FR-08","screen":""},
+    {"id":"IO-06","kind":"db","name":"Save the budget data","dir":"out","party":"Storage inside the device","example":"2026-10-30 / Food / 8.50","required":true,"failure":"If it cannot save, keep what was typed and try again","prd":"FR-03","screen":""},
+    {"id":"IO-07","kind":"screen","name":"Monthly total chart","dir":"out","party":"User","example":"Food in October: 324.00","required":true,"failure":"If there are 0 records, show \"No records yet\"","prd":"FR-04","screen":"SC-03"},
+    {"id":"IO-08","kind":"file","name":"Write out the totals","dir":"out","party":"User's computer","example":"budget_2026-10.csv","required":false,"failure":"If it cannot be written, ask the user to choose another place","prd":"FR-06","screen":"SC-03"},
+    {"id":"IO-09","kind":"external","name":"End-of-month notice email","dir":"out","party":"User's email","example":"You have used 90% of this month's budget","required":false,"failure":"If it cannot be sent, keep the record and send it again the next day","prd":"FR-09","screen":""}
+  ]
+}

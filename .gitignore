@@ -1,0 +1,10 @@
+.ws/
+projects/
+.env
+.env.*
+!.env.example
+.secrets/
+*.pyc
+__pycache__/
+.DS_Store
+.claude/settings.local.json

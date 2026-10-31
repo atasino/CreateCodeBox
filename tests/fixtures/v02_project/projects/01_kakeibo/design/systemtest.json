@@ -1,0 +1,65 @@
+{
+  "project": "かんたん家計簿",
+  "rows": [
+    {
+      "id": "T-IO-01-N1",
+      "io": "IO-01",
+      "kind": "N",
+      "state": "正常",
+      "what": "取り込む",
+      "expected": "出る",
+      "route": "ST",
+      "reason": "",
+      "status": "pass",
+      "by": "user",
+      "evidence": "820 円と出ました",
+      "shot": "",
+      "at": "2026-10-28 10:00"
+    },
+    {
+      "id": "T-IO-01-F1",
+      "io": "IO-01",
+      "kind": "F",
+      "state": "失敗",
+      "what": "壊れた CSV",
+      "expected": "数を出す",
+      "route": "ST",
+      "reason": "",
+      "status": "todo",
+      "by": "",
+      "evidence": "",
+      "shot": "",
+      "at": ""
+    },
+    {
+      "id": "T-IO-02-N1",
+      "io": "IO-02",
+      "kind": "N",
+      "state": "正常",
+      "what": "合計を出す",
+      "expected": "出る",
+      "route": "ST",
+      "reason": "",
+      "status": "todo",
+      "by": "",
+      "evidence": "",
+      "shot": "",
+      "at": ""
+    },
+    {
+      "id": "T-IO-02-F1",
+      "io": "IO-02",
+      "kind": "F",
+      "state": "失敗",
+      "what": "書けない",
+      "expected": "場所を知らせる",
+      "route": "ST",
+      "reason": "",
+      "status": "todo",
+      "by": "",
+      "evidence": "",
+      "shot": "",
+      "at": ""
+    }
+  ]
+}

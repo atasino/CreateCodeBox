@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>How CreateCodeBox works</title>
+<style>
+:root{
+  --bg:#f7f8fa; --fg:#1d2330; --sub:#4a5468; --card:#ffffff; --line:#c9d0dc;
+  --accent:#2457d6; --accent-bg:#e8eefc; --gate:#b45309; --gate-bg:#fff1dd; --dot:#2457d6;
+  --focus:#1d2330;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12151b; --fg:#e8ebf2; --sub:#aab3c5; --card:#1c212b; --line:#3a4356;
+    --accent:#8fb0ff; --accent-bg:#1f2a47; --gate:#ffb55e; --gate-bg:#3a2a12; --dot:#8fb0ff;
+    --focus:#e8ebf2;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:24px 16px 32px}
+h1{font-size:1.5rem;margin:0 0 4px}
+.lead{color:var(--sub);margin:0 0 20px}
+.flow{display:flex;align-items:stretch;gap:0;margin:0 0 20px;padding:0;list-style:none}
+.step{flex:1 1 0;min-width:0;display:flex;align-items:center}
+.box{flex:1 1 auto;min-width:0;width:100%;text-align:left;font:inherit;color:var(--fg);background:var(--card);
+  border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}
+.box:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.box[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-bg)}
+.n{display:block;font-size:.875rem;color:var(--sub)}
+.t{display:block;font-weight:700;font-size:1.1rem}
+.w{display:block;font-size:.875rem;color:var(--sub);margin-top:2px}
+.tag{display:inline-block;margin-top:6px;padding:0 8px;border-radius:999px;font-size:.875rem;font-weight:700;color:var(--gate);border:1px solid var(--gate);background:var(--gate-bg)}
+.arrow{flex:0 0 40px;height:40px}
+.arrow svg{width:100%;height:100%;display:block}
+.arrow line{stroke:var(--line);stroke-width:3}
+.arrow polygon{fill:var(--line)}
+.arrow .dot{fill:var(--dot)}
+#detail{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:16px}
+#detail h2{font-size:1.15rem;margin:0 0 8px}
+#detail h3{font-size:1rem;margin:12px 0 4px;color:var(--sub)}
+#detail p{margin:0}
+#detail ul{margin:0;padding-left:1.2em}
+.gate-note{margin-top:12px;padding:8px 12px;border-radius:8px;background:var(--gate-bg);border:1px solid var(--gate)}
+.hint{color:var(--sub);margin:0 0 8px;font-size:.95rem}
+code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--accent-bg);padding:0 4px;border-radius:4px}
+footer{max-width:1000px;margin:0 auto;padding:0 16px 24px;text-align:center;font-size:.8rem;color:var(--sub)}
+@media (max-width:720px){
+  .flow{flex-direction:column}
+  .step{flex-direction:column;align-items:stretch}
+  .arrow{flex:0 0 40px;width:100%;display:flex;justify-content:center}
+  .arrow svg{transform:rotate(90deg);width:40px;margin:0 auto}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>How CreateCodeBox works</h1>
+  <p class="lead">Six stages, from your first sentence to a first version that works. Click a stage to read what happens in it.</p>
+  <p class="hint">At two stages, you type a fixed word (<code>looks good</code>, <code>approve</code>). Those stages are marked "You say".</p>
+  <ol class="flow" id="flow"></ol>
+  <section id="detail" aria-live="polite"></section>
+</main>
+<footer>Made with CreateCodeBox</footer>
+<script>
+(function(){
+  var STEPS=[
+    {n:"1",t:"Ask",w:"Short questions",
+     one:"Claude asks what you want to make and what the goal is. One question at a time.",
+     list:["Question 1: what do you want to make? Claude says it back in one sentence.",
+           "Question 2: is it just for you, for others, or not sure yet?",
+           "“I don’t know” is OK. Claude writes a note and asks again later."],
+     care:"Claude may ask a few more short questions later. It asks only what the prototype cannot show. Claude is told to decide the rest and to mark each guess as tentative."},
+    {n:"2",t:"Reference",w:"A site or app that is close",
+     one:"Claude asks if there is a site or app that is close to what you want.",
+     list:["Tell Claude its name or link.",
+           "Say what you like about it, and what should be different.",
+           "“None” is OK."],
+     care:"Claude is told to use the reference for the layout, the flow, and the names of the parts. It is told not to copy the text, pictures, logo, or colors."},
+    {n:"3",t:"Prototype",w:"A first version of the screen",
+     one:"Claude opens a prototype in your browser, or tells you the file to double-click. If you gave a reference, it has a similar layout and flow. With no reference, it is a rough first picture.",
+     list:["The prototype is made from your words and your reference. It uses made-up data.",
+           "Tell Claude what is most different from what you want. Claude fixes it.",
+           "After each change, reload the browser tab to see the new version.",
+           "When you type the fixed word, the prototype becomes the design."],
+     say:"looks good",
+     care:"The prototype is a guess, and it may be wrong in places."},
+    {n:"4",t:"Approve",w:"Everything in and out",
+     one:"Before building, Claude lists every input and every output, and what you see when something fails.",
+     list:["You see a table with arrows that show how information moves.",
+           "Each row has one real example.",
+           "Claude asks once: is anything missing?"],
+     say:"approve",
+     care:"The workspace is set up to stop Claude from writing the code of your project until you approve. If you change the design later, you must approve again."},
+    {n:"5",t:"Build",w:"One step at a time",
+     one:"Claude builds one row of the table at a time. It runs each row before it marks it done.",
+     list:["The default result is one HTML file. You open it by double-click: `projects/<name>/src/index.html`.",
+           "A second helper is asked to check the work before anything is called done.",
+           "Keys and passwords are meant to stay out of the chat. You type them in a separate window."],
+     care:"If you ask for a change that is not in the design, you must approve again."},
+    {n:"6",t:"Check",w:"Check it yourself",
+     one:"The first version is done when you really see every result you asked for.",
+     list:["Claude gives you a numbered list of things to check. You try each one and answer with the numbers.",
+           "Claude checks the things you cannot start by hand, like a monthly job.",
+           "Claude tells you what is checked and what is not yet checked."],
+     care:"A test mark that says pass is not enough. Done means you saw the result, or Claude checked it. New ideas start again from the table of inputs and outputs."}
+  ];
+  var flow=document.getElementById("flow");
+  var detail=document.getElementById("detail");
+  var SVGNS="http://www.w3.org/2000/svg";
+  var boxes=[],dots=[];
+
+  function el(tag,cls,text){
+    var e=document.createElement(tag);
+    if(cls){e.className=cls;}
+    if(text!==undefined){e.textContent=text;}
+    return e;
+  }
+  function rich(parent,text){
+    text.split("`").forEach(function(part,i){
+      if(i%2===1){parent.appendChild(el("code",null,part));}
+      else if(part){parent.appendChild(document.createTextNode(part));}
+    });
+    return parent;
+  }
+  function svgEl(tag,attrs){
+    var e=document.createElementNS(SVGNS,tag);
+    for(var k in attrs){e.setAttribute(k,attrs[k]);}
+    return e;
+  }
+  function show(i){
+    var s=STEPS[i];
+    for(var j=0;j<boxes.length;j++){boxes[j].setAttribute("aria-pressed",j===i?"true":"false");}
+    detail.textContent="";
+    detail.appendChild(el("h2",null,s.n+". "+s.t));
+    detail.appendChild(el("p",null,s.one));
+    detail.appendChild(el("h3",null,"What happens"));
+    var ul=el("ul");
+    s.list.forEach(function(x){ul.appendChild(rich(el("li"),x));});
+    detail.appendChild(ul);
+    if(s.say){
+      var g=el("p","gate-note","You say: ");
+      g.appendChild(el("code",null,s.say));
+      g.appendChild(document.createTextNode(" Type exactly this."));
+      detail.appendChild(g);
+    }
+    detail.appendChild(el("h3",null,"Good to know"));
+    detail.appendChild(rich(el("p"),s.care));
+  }
+  function makeArrow(){
+    var wrap=el("div","arrow");
+    wrap.setAttribute("aria-hidden","true");
+    var svg=svgEl("svg",{viewBox:"0 0 44 44"});
+    svg.appendChild(svgEl("line",{x1:"4",y1:"22",x2:"32",y2:"22"}));
+    svg.appendChild(svgEl("polygon",{points:"30,14 42,22 30,30"}));
+    var dot=svgEl("circle",{"class":"dot",cx:"4",cy:"22",r:"5"});
+    svg.appendChild(dot);
+    wrap.appendChild(svg);
+    dots.push(dot);
+    return wrap;
+  }
+  STEPS.forEach(function(s,i){
+    var li=el("li","step");
+    var b=el("button","box");
+    b.type="button";
+    b.setAttribute("aria-pressed","false");
+    b.appendChild(el("span","n","Stage "+s.n));
+    b.appendChild(el("span","t",s.t));
+    b.appendChild(el("span","w",s.w));
+    if(s.say){b.appendChild(el("span","tag","You say"));}
+    b.addEventListener("click",function(){show(i);});
+    boxes.push(b);
+    li.appendChild(b);
+    if(i<STEPS.length-1){li.appendChild(makeArrow());}
+    flow.appendChild(li);
+  });
+  show(0);
+
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)");
+  var raf=null,start=null;
+  function frame(ts){
+    if(start===null){start=ts;}
+    var p=((ts-start)%1800)/1800;
+    for(var i=0;i<dots.length;i++){
+      var q=(p+i*0.2)%1;
+      dots[i].setAttribute("cx",String(4+q*28));
+    }
+    raf=window.requestAnimationFrame(frame);
+  }
+  function apply(){
+    if(reduce&&reduce.matches){
+      if(raf!==null){window.cancelAnimationFrame(raf);raf=null;}
+      for(var i=0;i<dots.length;i++){dots[i].setAttribute("cx","18");}
+    }else if(raf===null){
+      start=null;
+      raf=window.requestAnimationFrame(frame);
+    }
+  }
+  apply();
+  if(reduce){
+    if(reduce.addEventListener){reduce.addEventListener("change",apply);}
+    else if(reduce.addListener){reduce.addListener(apply);}
+  }
+})();
+</script>
+</body>
+</html>

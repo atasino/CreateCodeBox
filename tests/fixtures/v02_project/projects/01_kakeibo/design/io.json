@@ -1,0 +1,26 @@
+{
+  "rows": [
+    {
+      "id": "IO-01",
+      "kind": "ファイル",
+      "name": "支出の CSV を取り込む",
+      "dir": "in",
+      "party": "利用者",
+      "example": "meisai.csv",
+      "required": true,
+      "failure": "読めない行は飛ばして数を出す",
+      "prd": "FR-01"
+    },
+    {
+      "id": "IO-02",
+      "kind": "ファイル",
+      "name": "月ごとの合計",
+      "dir": "out",
+      "party": "利用者",
+      "example": "2026-10 食費 12,400 円",
+      "required": true,
+      "failure": "書けないとき場所を知らせる",
+      "prd": "FR-02"
+    }
+  ]
+}

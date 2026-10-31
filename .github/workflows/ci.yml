@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: tests (Python ${{ matrix.python }})
+    # Pinned: Python 3.8 is not built for newer Ubuntu images.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.8", "3.12"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Show versions
+        run: |
+          python --version
+          git --version
+      - name: Run the tests
+        run: python -I tests/test_engine.py
+      - name: Run the hook protocol tests
+        if: ${{ !cancelled() }}
+        run: python -I tests/test_hook_protocol.py
+      - name: Run the Codex tests
+        if: ${{ !cancelled() }}
+        run: python -I tests/test_codex.py
+      - name: Check the generated Codex files
+        if: ${{ !cancelled() }}
+        run: python tools/gen_codex.py --check
+
+  addresses:
+    name: commit addresses (public repo)
+    if: github.repository == 'atasino/CreateCodeBox'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # The addresses themselves are never printed: this log is public.
+      - name: Every commit and tag uses a GitHub noreply address
+        run: |
+          ok='^([0-9]+[+])?[A-Za-z0-9-]+@users[.]noreply[.]github[.]com$|^noreply@github[.]com$'
+          n=$( { git log --all --format='%ae%n%ce'; git for-each-ref refs/tags --format='%(taggeremail)' | tr -d '<>' | sed '/^$/d'; } | sort -u | grep -c -v -E "$ok" || true)
+          if [ "$n" != "0" ]; then echo "$n address(es) are not GitHub noreply addresses."; exit 1; fi
+          echo "All commit and tag addresses are GitHub noreply addresses."
+      - name: No email address in the files except made-up ones
+        if: ${{ !cancelled() }}
+        run: |
+          ok='@users[.]noreply[.]github[.]com$|^noreply@github[.]com$|@example[.](com|org|net)$|[.](invalid|test|example)$|^git@github[.]com$|^tok@github[.]com$'
+          n=$(git grep -h -I -o -E '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+([.][A-Za-z0-9-]+)+' -- . | sort -u | grep -c -v -E "$ok" || true)
+          if [ "$n" != "0" ]; then echo "$n email address(es) in the files are not made-up ones."; exit 1; fi
+          echo "No real email address in the files."

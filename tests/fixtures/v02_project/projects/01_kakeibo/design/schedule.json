@@ -1,0 +1,40 @@
+{
+  "project": "かんたん家計簿",
+  "stage": "RUN",
+  "rows": [
+    {
+      "id": "S-01",
+      "title": "作る準備",
+      "status": "done",
+      "done_when": "src/ に最初のファイルがある",
+      "artifact": "",
+      "note": "",
+      "evidence": "python3 app.py を動かした"
+    },
+    {
+      "id": "S-02",
+      "title": "支出の CSV を取り込む（IO-01）を動くようにする",
+      "status": "doing",
+      "done_when": "具体例を入れて期待どおり",
+      "artifact": "",
+      "note": ""
+    },
+    {
+      "id": "S-03",
+      "title": "月ごとの合計（IO-02）を動くようにする",
+      "status": "todo",
+      "done_when": "具体例を入れて期待どおり",
+      "artifact": "",
+      "note": ""
+    },
+    {
+      "id": "S-04",
+      "title": "システムテスト（全 4 ケース）を、人と同じ操作で確かめる",
+      "status": "todo",
+      "done_when": "一覧の全ケースが実際に出た",
+      "artifact": "",
+      "note": "",
+      "gate": "systemtest"
+    }
+  ]
+}

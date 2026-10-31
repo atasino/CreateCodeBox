@@ -1,0 +1,74 @@
+name: A step did not work
+description: Tell us which step did not work and what you saw.
+title: "A step did not work"
+labels: ["help"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for telling us. A short report is enough.
+        Please do not paste keys, passwords, tokens, or personal information.
+  - type: dropdown
+    id: step
+    attributes:
+      label: Which step did not work?
+      description: Choose a step from the README, or a stage from "How it goes".
+      options:
+        - "README step 1: Install Claude Code"
+        - "README step 2: Open Terminal and type claude"
+        - "README step 3: Paste the one sentence"
+        - "README step 4: Follow what Claude shows you"
+        - "README step 5: Tell Claude what you want to make"
+        - "README step 6: Open the app"
+        - "Stage 1: Ask"
+        - "Stage 2: Reference"
+        - "Stage 3: Prototype"
+        - "Stage 4: Approve"
+        - "Stage 5: Build"
+        - "Stage 6: Check"
+        - "Not sure"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Your operating system
+      options:
+        - Mac
+        - Windows
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: typed
+    attributes:
+      label: What did you type or paste?
+      description: Copy the sentence or the command that you typed or pasted.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: saw
+    attributes:
+      label: What did you see?
+      description: |
+        Copy the words on the screen as they are.
+        Before you paste, check that no key, password, token, or personal information is in the text. Remove it if there is.
+    validations:
+      required: true
+  - type: input
+    id: claude-version
+    attributes:
+      label: Your Claude Code version
+      description: Type `claude --version` in Terminal and copy the result. If Claude Code is not installed yet, write "not installed".
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `bash ws/bin/ws.sh doctor` (optional)
+      description: Run it in the CreateCodeBox folder, if you can. Check the text for keys and personal information before you paste it.
+      render: text
+    validations:
+      required: false

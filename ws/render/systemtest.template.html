@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Done list</title>
+<style>
+:root{
+  --bg:#f5f6fb; --surface:#ffffff; --surface2:#eef1f9;
+  --text:#1c2333; --muted:#4f5a70; --border:#d3d9e9;
+  --accent:#3552d6; --accent-soft:#e3e9ff;
+  --ok:#17794a; --ok-soft:#dff3e8;
+  --bad:#b3261e; --bad-soft:#fde7e4;
+  --warn:#8f4400; --warn-soft:#fff0dc; --warn-line:#e08a1e;
+  --todo:#4f5a70;
+  --shadow:0 1px 2px rgba(20,30,60,.06),0 10px 28px rgba(20,30,60,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0e121b; --surface:#171d2b; --surface2:#1f2738;
+    --text:#e9edf7; --muted:#aab4c9; --border:#2d374e;
+    --accent:#93a9ff; --accent-soft:#232c4a;
+    --ok:#5fd394; --ok-soft:#173629;
+    --bad:#ff8a80; --bad-soft:#3d1b19;
+    --warn:#ffb35c; --warn-soft:#3a2610; --warn-line:#d98a2b;
+    --todo:#aab4c9;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.75 /*__WS_FONT__*/system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:860px;margin:0 auto;padding:28px 16px 40px}
+h1{font-size:28px;line-height:1.35;margin:4px 0 6px;overflow-wrap:anywhere}
+h2{font-size:20px;margin:0 0 12px;line-height:1.4}
+.eyebrow{margin:0;color:var(--accent);font-weight:700;letter-spacing:.08em}
+.lead{margin:0;color:var(--muted)}
+section{margin-top:28px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+#notice{margin:14px 0 0;padding:10px 14px;border-radius:12px;background:var(--accent-soft);border:1px solid var(--border)}
+#notice[hidden]{display:none}
+
+/* progress */
+.prog{padding:22px 20px}
+.bignum{display:flex;align-items:baseline;justify-content:center;gap:8px;flex-wrap:wrap}
+.bignum .lab{font-size:18px;color:var(--muted);font-weight:700}
+.bignum .n{font-size:56px;font-weight:800;line-height:1.1;color:var(--accent);font-variant-numeric:tabular-nums}
+.bignum .of{font-size:24px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{margin:14px 0 12px;height:18px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);overflow:hidden}
+.bar>i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--ok));transition:width 1.2s cubic-bezier(.3,.7,.2,1) .3s}
+.counts{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:center;margin:0;padding:0;list-style:none}
+.counts li{display:inline-flex;align-items:center;gap:6px}
+.counts b{font-variant-numeric:tabular-nums}
+.sum{margin:12px 0 0;text-align:center;color:var(--muted)}
+.skipnote{margin:6px 0 0;text-align:center;color:var(--muted);font-size:15px}
+.ship{margin:16px 0 0;padding:16px;border-radius:14px;text-align:center;font-weight:800;font-size:22px;line-height:1.5;
+  background:var(--ok-soft);color:var(--ok);border:3px solid var(--ok);animation:pop .7s cubic-bezier(.2,.8,.2,1) both}
+.ship small{display:block;font-size:16px;font-weight:400;color:var(--text)}
+.ship[hidden]{display:none}
+.ship.caution{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}
+
+/* balance */
+.bal{padding:18px 20px}
+.balbar{display:flex;height:22px;border-radius:999px;overflow:hidden;border:1px solid var(--border);background:var(--surface2)}
+.balbar i{display:block;height:100%;width:0;transition:width 1s cubic-bezier(.3,.7,.2,1) .3s}
+.balbar .bn{background:var(--ok)}
+.balbar .ba{background:var(--accent)}
+.ballegend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;padding:0;list-style:none}
+.ballegend b{font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.dot.n{background:var(--ok)} .dot.a{background:var(--accent)}
+.balmsg{margin:12px 0 0}
+.warn{padding:10px 14px;border-radius:12px;background:var(--warn-soft);color:var(--warn);border:2px solid var(--warn-line);font-weight:700}
+.warn span{display:block;font-weight:400;color:var(--text)}
+.balok{color:var(--ok);font-weight:700}
+
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.filters button{font:inherit;font-size:15px;padding:6px 14px;min-height:40px;border-radius:999px;border:2px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+.filters button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:700}
+.filters button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* case cards */
+.cases{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.case{padding:14px 16px;border-radius:16px;background:var(--surface);border:1px solid var(--border);border-left-width:8px;box-shadow:var(--shadow);
+  animation:rise .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0)*70ms + 250ms)}
+.case.pass{border-left-color:var(--ok)}
+.case.fail{border-left-color:var(--bad);background:var(--bad-soft)}
+.case.todo{border-left-color:var(--todo)}
+.case.routed{border-style:dashed;border-left-style:solid}
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.id{font-size:15px;font-weight:700;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.kind{display:inline-flex;align-items:center;gap:4px;padding:0 10px;border-radius:8px;font-size:15px;font-weight:800;line-height:1.7;border:2px solid currentColor}
+.kind.N{color:var(--ok);background:var(--ok-soft)}
+.kind.B{color:var(--accent);background:var(--accent-soft)}
+.kind.F{color:var(--bad);background:var(--bad-soft)}
+.st{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;font-weight:700;line-height:1.7;border:2px solid currentColor;margin-left:auto}
+.st.pass{color:var(--ok)} .st.fail{color:var(--bad)} .st.todo{color:var(--todo)}
+.what{margin:8px 0 0;font-size:17px;font-weight:700;line-height:1.6;overflow-wrap:anywhere}
+dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 12px}
+dt{color:var(--muted);font-size:15px;font-weight:700}
+dd{margin:0;overflow-wrap:anywhere}
+dd code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:15px;background:var(--surface2);padding:1px 6px;border-radius:6px}
+.ev-no{color:var(--warn);font-weight:700}
+.ev-yes{color:var(--ok);font-weight:700}
+.route{margin:10px 0 0;padding:8px 12px;border-radius:10px;background:var(--surface2);border:2px dashed var(--muted)}
+.route b{color:var(--text)}
+.route.noreason{border-color:var(--warn-line);background:var(--warn-soft);color:var(--warn)}
+.empty{padding:20px;color:var(--muted)}
+footer{margin-top:36px;text-align:center;font-size:13px;color:var(--muted)}
+
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{opacity:0;transform:scale(.92)}100%{opacity:1;transform:none}}
+
+@media (max-width:430px){
+  h1{font-size:24px}
+  .bignum .n{font-size:48px}
+  .st{margin-left:0}
+  dl{grid-template-columns:1fr;gap:0}
+  dd{margin-bottom:6px}
+  .ship{font-size:20px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow" data-l="title">Done list</p>
+    <h1 id="title" data-l="loading">Loading…</h1>
+    <p class="lead" data-l="lead">It is done when every case on the list has really come out, tried by your own hands.</p>
+    <p id="notice" role="status" hidden></p>
+  </header>
+
+  <section aria-labelledby="h-prog">
+    <h2 id="h-prog" data-l="h_prog">How many really came out</h2>
+    <div class="card prog">
+      <div class="bignum" aria-hidden="true"><span class="lab" data-l="lab_pass">Passed</span><span class="n" id="n-done">0</span><span class="of" id="n-total"></span></div>
+      <div class="bar" id="bar" role="progressbar" data-l-aria="progress_aria" aria-label="Share of cases that passed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="bar-in"></i></div>
+      <ul class="counts" id="counts"></ul>
+      <p class="sum" id="sum"></p>
+      <p class="skipnote" id="skipnote" hidden></p>
+      <div class="ship" id="ship" role="status" hidden></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-bal">
+    <h2 id="h-bal" data-l="h_bal">Balance of normal and abnormal</h2>
+    <div class="card bal">
+      <div class="balbar" aria-hidden="true"><i class="bn" id="bal-n"></i><i class="ba" id="bal-a"></i></div>
+      <ul class="ballegend" id="ballegend"></ul>
+      <div class="balmsg" id="balmsg"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-cases">
+    <h2 id="h-cases" data-l="h_cases">List of cases</h2>
+    <div class="filters" id="filters" role="group" data-l-aria="filters_aria" aria-label="Filter what is shown"></div>
+    <ol class="cases" id="cases"></ol>
+  </section>
+
+  <noscript><p class="lead"><!--ws-noscript-->Turn on JavaScript to see this page.</p></noscript>
+  <footer data-l="footer">Made with CreateCodeBox</footer>
+</main>
+
+<script type="application/json" id="ws-data">/*__WS_DATA__*/null</script>
+<script type="application/json" id="ws-labels">/*__WS_LABELS__*/null</script>
+<script type="application/json" id="ws-labels-default">{
+ "loading": "Loading…",
+ "footer": "Made with CreateCodeBox",
+ "noscript": "Turn on JavaScript to see this page.",
+ "notice_sample": "A sample is shown for now.",
+ "notice_bad": "The data could not be read, so a sample is shown.",
+ "app_default": "This app",
+ "title": "Done list",
+ "lead": "It is done when every case on the list has really come out, tried by your own hands.",
+ "h_prog": "How many really came out",
+ "lab_pass": "Passed",
+ "progress_aria": "Share of cases that passed",
+ "h_bal": "Balance of normal and abnormal",
+ "h_cases": "List of cases",
+ "filters_aria": "Filter what is shown",
+ "st_pass": "Passed",
+ "st_fail": "Failed",
+ "st_todo": "Not checked yet",
+ "k_n": "Normal",
+ "k_n_name": "Normal cases",
+ "k_b": "Edge, empty",
+ "k_b_name": "Abnormal cases (edge, empty)",
+ "k_f": "Failure",
+ "k_f_name": "Abnormal cases (failure)",
+ "by_user": "you",
+ "by_ai": "Claude",
+ "by_run": "a test run",
+ "checked_by": "(checked by {by}{at})",
+ "checked_at": "({at})",
+ "of_total": "/ {total} items",
+ "bar_text": "{pass} of {total} items passed",
+ "sum_all": "Every case on the list has really come out.",
+ "sum_remain": "{n} more cases have not come out yet.",
+ "sum_fail": " ({n} of them need a fix.)",
+ "sum_none": "There are no cases yet.",
+ "skipnote": "{n} cases sent to another way of checking are not counted here.",
+ "ship_ok": "Ready to release",
+ "ship_ok_small": "Normal and abnormal cases have all really come out.",
+ "ship_caution": "All passed. But there are not enough abnormal cases.",
+ "ship_caution_small": "Add what you see when something fails, check it, and then release.",
+ "bal_n": "Normal (N)",
+ "bal_a": "Abnormal (B, F)",
+ "bal_unit": " items",
+ "bal_none": "There are no cases yet.",
+ "bal_warn": "⚠ Not enough abnormal cases",
+ "bal_warn_hint": "Decide about as many failure cases as normal ones and add them to the list. (Rule of thumb: at least half of all cases.)",
+ "bal_ok": "✓ Abnormal cases are at least half of all cases.",
+ "f_all": "All",
+ "f_n": "Normal",
+ "f_a": "Abnormal",
+ "f_todo": "Not yet",
+ "f_fail": "Failed",
+ "what_blank": "(the action is not written yet)",
+ "dt_expected": "What you see when it passes",
+ "expected_blank": "(not written yet)",
+ "dt_state": "State",
+ "dt_evidence": "Proof",
+ "ev_yes": "Proof recorded",
+ "ev_no": "No proof",
+ "routed_h": "Checked another way (reasons 1 to 3)",
+ "route_noreason": "No reason is written yet. Write one of: (1) it affects safety (2) this check cannot produce it (3) there are too many combinations.",
+ "empty_filter": "No cases match this filter.",
+ "state_normal": "Normal",
+ "state_empty": "Empty",
+ "state_error": "Error",
+ "state_ok": "Works",
+ "state_failure": "Fails",
+ "sample_project": "Sample app",
+ "s1_what": "Type \"lunch 800\" and press \"Add\"",
+ "s1_exp": "The list gets one more row and the total goes up by 800",
+ "s1_ev": "The row was added",
+ "s2_what": "Press \"Add\" with the amount left empty",
+ "s2_exp": "\"Enter an amount\" appears and the list does not grow",
+ "s3_what": "Type \"abc\" as the amount and press \"Add\"",
+ "s3_exp": "A red message \"Enter a number\" appears and what you typed stays"
+}</script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- words: English defaults, replaced by the labels the workspace passes in ---------- */
+  function readJson(id) {
+    var node = document.getElementById(id);
+    var raw = node ? node.textContent : '';
+    raw = raw.replace(/^\s*\/\*[\s\S]*?\*\/\s*/, '').trim();
+    if (!raw || raw === 'null') { return {}; }
+    try { var o = JSON.parse(raw); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; }
+  }
+  var L = readJson('ws-labels-default'), passed = readJson('ws-labels');
+  Object.keys(passed).forEach(function (k) { L[k] = passed[k]; });
+  function fmt(s, kw) {
+    return String(s).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(kw, k) ? String(kw[k]) : m; });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-l]'), function (n) { if (L[n.getAttribute('data-l')] !== undefined) { n.textContent = L[n.getAttribute('data-l')]; } });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-l-aria]'), function (n) { if (L[n.getAttribute('data-l-aria')] !== undefined) { n.setAttribute('aria-label', L[n.getAttribute('data-l-aria')]); } });
+
+  var DEFAULT_DATA = {
+    project: L.sample_project,
+    rows: [
+      { id: 'T-IO-01-N1', io: 'IO-01', kind: 'N', state: 'ok', what: L.s1_what, expected: L.s1_exp, route: 'ST', reason: '', status: 'pass', by: 'user', evidence: L.s1_ev, shot: '', at: '' },
+      { id: 'T-IO-01-B1', io: 'IO-01', kind: 'B', state: 'empty', what: L.s2_what, expected: L.s2_exp, route: 'ST', reason: '', status: 'todo', by: '', evidence: '', shot: '', at: '' },
+      { id: 'T-IO-01-F1', io: 'IO-01', kind: 'F', state: 'error', what: L.s3_what, expected: L.s3_exp, route: 'ST', reason: '', status: 'todo', by: '', evidence: '', shot: '', at: '' }
+    ]
+  };
+  var STATUS = {
+    pass: { label: L.st_pass, mark: '✓ ' },
+    fail: { label: L.st_fail, mark: '✕ ' },
+    todo: { label: L.st_todo, mark: '○ ' }
+  };
+  var KINDS = {
+    N: { label: L.k_n, name: L.k_n_name },
+    B: { label: L.k_b, name: L.k_b_name },
+    F: { label: L.k_f, name: L.k_f_name }
+  };
+  var BY = { user: L.by_user, ai: L.by_ai, run: L.by_run };
+  var reduced = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+  function str(v) { return v === null || v === undefined ? '' : String(v); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+
+  /* ---------- read the data ---------- */
+  function readData() {
+    var node = document.getElementById('ws-data');
+    var raw = node ? node.textContent : '';
+    raw = raw.replace(/^\s*\/\*[\s\S]*?\*\/\s*/, '').trim();
+    if (!raw || raw === 'null') { return { data: DEFAULT_DATA, state: 'default' }; }
+    try {
+      var d = JSON.parse(raw);
+      if (d && typeof d === 'object' && Array.isArray(d.rows)) { return { data: d, state: 'ok' }; }
+    } catch (e) { /* fall back to the sample */ }
+    return { data: DEFAULT_DATA, state: 'bad' };
+  }
+
+  var loaded = readData();
+  var data = loaded.data;
+  var projectName = str(data.project) || L.app_default;
+  var rows = data.rows.map(function (r, i) {
+    r = r || {};
+    var id = str(r.id) || ('T-' + (i + 1));
+    var kind = str(r.kind).toUpperCase();
+    if (!KINDS[kind]) {
+      var m = /-([NBF])\d+$/.exec(id);
+      kind = m ? m[1] : 'N';
+    }
+    var st = str(r.status);
+    if (!STATUS[st]) { st = 'todo'; }
+    var route = str(r.route).toUpperCase() || 'ST';
+    return {
+      id: id, io: str(r.io), kind: kind, state: str(r.state),
+      what: str(r.what), expected: str(r.expected),
+      route: route, reason: str(r.reason), status: st,
+      by: str(r.by), evidence: str(r.evidence), shot: str(r.shot), at: str(r.at)
+    };
+  });
+
+  document.title = L.title + ' - ' + projectName;
+  document.getElementById('title').textContent = projectName;
+  var notice = document.getElementById('notice');
+  if (loaded.state === 'default') { notice.textContent = L.notice_sample; notice.hidden = false; }
+  if (loaded.state === 'bad') { notice.textContent = L.notice_bad; notice.hidden = false; }
+
+  /* ---------- count ---------- */
+  var stRows = rows.filter(function (r) { return r.route === 'ST'; });
+  var skipped = rows.length - stRows.length;
+  var total = stRows.length;
+  var counts = { pass: 0, fail: 0, todo: 0 };
+  stRows.forEach(function (r) { counts[r.status] += 1; });
+  var pct = total ? Math.round(counts.pass / total * 100) : 0;
+  var nN = rows.filter(function (r) { return r.kind === 'N'; }).length;
+  var nA = rows.length - nN;
+  var lowAbnormal = rows.length > 0 && nA * 2 < rows.length;
+  var allPass = total > 0 && counts.pass === total;
+
+  /* ---------- progress ---------- */
+  var nDone = document.getElementById('n-done');
+  document.getElementById('n-total').textContent = fmt(L.of_total, { total: total });
+  var bar = document.getElementById('bar');
+  bar.setAttribute('aria-valuenow', String(pct));
+  bar.setAttribute('aria-valuetext', fmt(L.bar_text, { total: total, pass: counts.pass }));
+  var barIn = document.getElementById('bar-in');
+  function showNum(v) { nDone.textContent = String(Math.round(v)); }
+  if (reduced.matches || !total) {
+    barIn.style.transition = 'none';
+    barIn.style.width = pct + '%';
+    showNum(counts.pass);
+  } else {
+    showNum(0);
+    window.requestAnimationFrame(function () { window.requestAnimationFrame(function () { barIn.style.width = pct + '%'; }); });
+    var start = null, dur = 1300, delay = 300;
+    var step = function (ts) {
+      if (start === null) { start = ts; }
+      var t = Math.min(1, Math.max(0, (ts - start - delay) / dur));
+      var e = 1 - Math.pow(1 - t, 3);
+      showNum(counts.pass * e);
+      if (t < 1) { window.requestAnimationFrame(step); } else { showNum(counts.pass); }
+    };
+    window.requestAnimationFrame(step);
+  }
+
+  var cl = document.getElementById('counts');
+  ['pass', 'fail', 'todo'].forEach(function (k) {
+    var li = el('li');
+    li.appendChild(document.createTextNode(STATUS[k].mark + STATUS[k].label + ' '));
+    li.appendChild(el('b', '', String(counts[k])));
+    cl.appendChild(li);
+  });
+  var remain = total - counts.pass;
+  document.getElementById('sum').textContent = total
+    ? (allPass ? L.sum_all : fmt(L.sum_remain, { n: remain }) + (counts.fail ? fmt(L.sum_fail, { n: counts.fail }) : ''))
+    : L.sum_none;
+  if (skipped) {
+    var sk = document.getElementById('skipnote');
+    sk.textContent = fmt(L.skipnote, { n: skipped });
+    sk.hidden = false;
+  }
+  var ship = document.getElementById('ship');
+  if (allPass) {
+    ship.hidden = false;
+    if (lowAbnormal) {
+      ship.className = 'ship caution';
+      ship.textContent = L.ship_caution;
+      var sm = el('small', '', L.ship_caution_small);
+      ship.appendChild(sm);
+    } else {
+      ship.textContent = L.ship_ok;
+      ship.appendChild(el('small', '', L.ship_ok_small));
+    }
+  }
+
+  /* ---------- balance ---------- */
+  var balN = document.getElementById('bal-n');
+  var balA = document.getElementById('bal-a');
+  var pN = rows.length ? nN / rows.length * 100 : 0;
+  function setBal() { balN.style.width = pN + '%'; balA.style.width = (rows.length ? 100 - pN : 0) + '%'; }
+  if (reduced.matches) { balN.style.transition = 'none'; balA.style.transition = 'none'; setBal(); }
+  else { window.requestAnimationFrame(function () { window.requestAnimationFrame(setBal); }); }
+  var bl = document.getElementById('ballegend');
+  [['n', L.bal_n, nN], ['a', L.bal_a, nA]].forEach(function (x) {
+    var li = el('li');
+    li.appendChild(el('span', 'dot ' + x[0]));
+    li.appendChild(document.createTextNode(x[1] + ' '));
+    li.appendChild(el('b', '', String(x[2])));
+    li.appendChild(document.createTextNode(L.bal_unit));
+    bl.appendChild(li);
+  });
+  var bm = document.getElementById('balmsg');
+  if (!rows.length) {
+    bm.appendChild(el('p', 'lead', L.bal_none));
+  } else if (lowAbnormal) {
+    var w = el('div', 'warn', L.bal_warn);
+    w.setAttribute('role', 'alert');
+    w.appendChild(el('span', '', L.bal_warn_hint));
+    bm.appendChild(w);
+  } else {
+    bm.appendChild(el('p', 'balok', L.bal_ok));
+  }
+
+  /* ---------- case cards ---------- */
+  var list = document.getElementById('cases');
+  var filtersEl = document.getElementById('filters');
+  var FILTERS = [
+    { key: 'all', label: L.f_all, test: function () { return true; } },
+    { key: 'N', label: L.f_n, test: function (r) { return r.kind === 'N'; } },
+    { key: 'A', label: L.f_a, test: function (r) { return r.kind !== 'N'; } },
+    { key: 'todo', label: L.f_todo, test: function (r) { return r.status === 'todo'; } },
+    { key: 'fail', label: L.f_fail, test: function (r) { return r.status === 'fail'; } }
+  ];
+
+  function card(r, i) {
+    var routed = r.route !== 'ST';
+    var li = el('li', 'case ' + r.status + (routed ? ' routed' : ''));
+    li.style.setProperty('--i', String(Math.min(i, 14)));
+    var head = el('div', 'head');
+    head.appendChild(el('span', 'id', r.id));
+    var kb = el('span', 'kind ' + r.kind, r.kind + ' ' + KINDS[r.kind].label);
+    kb.setAttribute('title', KINDS[r.kind].name);
+    head.appendChild(kb);
+    head.appendChild(el('span', 'st ' + r.status, STATUS[r.status].mark + STATUS[r.status].label));
+    li.appendChild(head);
+    li.appendChild(el('p', 'what', r.what || L.what_blank));
+
+    var dl = el('dl');
+    dl.appendChild(el('dt', '', L.dt_expected));
+    dl.appendChild(el('dd', '', r.expected || L.expected_blank));
+    if (r.state) { dl.appendChild(el('dt', '', L.dt_state)); dl.appendChild(el('dd', '', L['state_' + r.state] || r.state)); }
+    if (r.status !== 'todo' || r.evidence || r.shot) {
+      dl.appendChild(el('dt', '', L.dt_evidence));
+      var dd = el('dd');
+      var has = !!(r.evidence || r.shot);
+      dd.appendChild(el('span', has ? 'ev-yes' : 'ev-no', has ? L.ev_yes : L.ev_no));
+      var who = BY[r.by] ? fmt(L.checked_by, { by: BY[r.by], at: (r.at ? ' · ' + r.at : '') }) : (r.at ? fmt(L.checked_at, { at: r.at }) : '');
+      if (who) { dd.appendChild(document.createTextNode(' ' + who)); }
+      if (r.evidence) { dd.appendChild(document.createElement('br')); dd.appendChild(document.createTextNode(r.evidence)); }
+      if (r.shot) { dd.appendChild(document.createElement('br')); dd.appendChild(el('code', '', r.shot)); }
+      dl.appendChild(dd);
+    }
+    li.appendChild(dl);
+
+    if (routed) {
+      var rt = el('p', 'route' + (r.reason ? '' : ' noreason'));
+      rt.appendChild(el('b', '', L.routed_h));
+      rt.appendChild(document.createTextNode(' ' + r.route + ': ' + (r.reason || L.route_noreason)));
+      li.appendChild(rt);
+    }
+    return li;
+  }
+
+  var current = 'all';
+  function render() {
+    list.textContent = '';
+    var f = FILTERS.filter(function (x) { return x.key === current; })[0];
+    var shown = rows.filter(f.test);
+    if (!shown.length) { list.appendChild(el('li', 'empty', L.empty_filter)); }
+    shown.forEach(function (r, i) { list.appendChild(card(r, i)); });
+    Array.prototype.forEach.call(filtersEl.children, function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-key') === current ? 'true' : 'false');
+    });
+  }
+  FILTERS.forEach(function (f) {
+    var b = el('button', '', f.label);
+    b.type = 'button';
+    b.setAttribute('data-key', f.key);
+    b.addEventListener('click', function () { current = f.key; render(); });
+    filtersEl.appendChild(b);
+  });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:lang="en" lang="en" viewBox="0 0 800 968" width="800" height="968" role="img" aria-labelledby="t d" font-family='system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Noto Sans", sans-serif'>
+<title id="t">After setup: six stages</title>
+<desc id="d">How CreateCodeBox goes after setup, in six stages. Ask: you say what you want to make. Reference: you name a close site or app. Prototype: you say what is most different, then type looks good. Approve: you type approve. Build: Claude builds one step at a time. Check: you tell Claude which numbered checks worked.</desc>
+<rect width="800" height="968" rx="24" fill="#1d2330"/>
+<text x="28" y="62" font-size="32" font-weight="700" fill="#f7f8fa">After setup: six stages</text>
+<text x="28" y="115.4" font-size="24" fill="#aab3c5">Claude</text>
+<rect x="131" y="90" width="140" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="139" y="115.4" font-size="24" fill="#1d2330">Your turn</text>
+<rect x="28" y="148" width="212" height="94" rx="16" fill="#8fb0ff"/>
+<text x="134" y="206.2" font-size="32" font-weight="700" text-anchor="middle" fill="#1d2330">Ask</text>
+<text x="258" y="183.4" font-size="24" fill="#aab3c5">Asks short questions</text>
+<rect x="258" y="196" width="361" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="266" y="221.4" font-size="24" fill="#1d2330">Say what you want to make</text>
+<path d="M134 246 V274 M126 265 L134 274 L142 265" fill="none" stroke="#8fb0ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="278" width="212" height="94" rx="16" fill="#8fb0ff"/>
+<text x="134" y="336.2" font-size="32" font-weight="700" text-anchor="middle" fill="#1d2330">Reference</text>
+<text x="258" y="313.4" font-size="24" fill="#aab3c5">Asks about a close site or app</text>
+<rect x="258" y="326" width="347" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="266" y="351.4" font-size="24" fill="#1d2330">Name a close site or app</text>
+<path d="M134 376 V404 M126 395 L134 404 L142 395" fill="none" stroke="#8fb0ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="408" width="212" height="122" rx="20.7" fill="#8fb0ff"/>
+<text x="134" y="480.2" font-size="32" font-weight="700" text-anchor="middle" fill="#1d2330">Prototype</text>
+<text x="258" y="443.4" font-size="24" fill="#aab3c5">Shows a first version of the screen</text>
+<rect x="258" y="456" width="389" height="62" rx="10.5" fill="#ffb55e"/>
+<text x="266" y="481.4" font-size="24" fill="#1d2330">Say what is most different,</text>
+<text x="266" y="509.4" font-size="24" fill="#1d2330">then type <tspan font-family='ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace'>looks good</tspan></text>
+<path d="M134 534 V562 M126 553 L134 562 L142 553" fill="none" stroke="#8fb0ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="566" width="212" height="94" rx="16" fill="#8fb0ff"/>
+<text x="134" y="624.2" font-size="32" font-weight="700" text-anchor="middle" fill="#1d2330">Approve</text>
+<text x="258" y="601.4" font-size="24" fill="#aab3c5">Shows the table and the design</text>
+<rect x="258" y="614" width="205" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="266" y="639.4" font-size="24" fill="#1d2330">Type <tspan font-family='ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace'>approve</tspan></text>
+<path d="M134 664 V692 M126 683 L134 692 L142 683" fill="none" stroke="#8fb0ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="696" width="212" height="64" rx="10.9" fill="#8fb0ff"/>
+<text x="134" y="739.2" font-size="32" font-weight="700" text-anchor="middle" fill="#1d2330">Build</text>
+<text x="258" y="736.4" font-size="24" fill="#aab3c5">Builds one step at a time</text>
+<path d="M134 764 V792 M126 783 L134 792 L142 783" fill="none" stroke="#8fb0ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="796" width="212" height="94" rx="16" fill="#8fb0ff"/>
+<text x="134" y="854.2" font-size="32" font-weight="700" text-anchor="middle" fill="#1d2330">Check</text>
+<text x="258" y="831.4" font-size="24" fill="#aab3c5">Gives a numbered list to check</text>
+<rect x="258" y="844" width="458" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="266" y="869.4" font-size="24" fill="#1d2330">Tell Claude which numbers worked</text>
+<text x="28" y="936.7" font-size="22" fill="#aab3c5">Claude may ask a few more short questions in between.</text>
+</svg>

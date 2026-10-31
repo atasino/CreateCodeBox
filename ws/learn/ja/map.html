@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitHub の道のり</title>
+<style>
+:root{
+  --bg:#f7f8fa; --fg:#1d2330; --sub:#4a5468; --card:#ffffff; --line:#c9d0dc;
+  --accent:#2457d6; --accent-bg:#e8eefc; --gate:#b45309; --gate-bg:#fff1dd; --dot:#2457d6;
+  --focus:#1d2330;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12151b; --fg:#e8ebf2; --sub:#aab3c5; --card:#1c212b; --line:#3a4356;
+    --accent:#8fb0ff; --accent-bg:#1f2a47; --gate:#ffb55e; --gate-bg:#3a2a12; --dot:#8fb0ff;
+    --focus:#e8ebf2;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+main{max-width:960px;margin:0 auto;padding:24px 16px 32px}
+h1{font-size:1.4rem;margin:0 0 4px}
+.lead{color:var(--sub);margin:0 0 20px}
+.flow{display:flex;align-items:stretch;gap:0;margin:0 0 20px;padding:0;list-style:none}
+.step{flex:1 1 0;min-width:0;display:flex;align-items:center}
+.box{flex:1 1 auto;min-width:0;width:100%;text-align:left;font:inherit;color:var(--fg);background:var(--card);
+  border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}
+.box:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.box[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-bg)}
+.box.gate{border-color:var(--gate);background:var(--gate-bg)}
+.box.gate[aria-pressed="true"]{outline:3px solid var(--gate)}
+.n{display:block;font-size:.875rem;color:var(--sub)}
+.t{display:block;font-weight:700}
+.w{display:block;font-size:.875rem;color:var(--sub);margin-top:2px}
+.tag{display:inline-block;margin-top:6px;padding:0 8px;border-radius:999px;font-size:.875rem;font-weight:700;color:var(--gate);border:1px solid var(--gate)}
+.arrow{flex:0 0 44px;height:44px;position:relative}
+.arrow svg{width:100%;height:100%;display:block}
+.arrow line{stroke:var(--line);stroke-width:3}
+.arrow polygon{fill:var(--line)}
+.arrow .dot{fill:var(--dot)}
+#detail{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:16px}
+#detail h2{font-size:1.1rem;margin:0 0 8px}
+#detail h3{font-size:1rem;margin:12px 0 4px;color:var(--sub)}
+#detail p{margin:0}
+.hint{color:var(--sub);margin:0 0 8px;font-size:.95rem}
+code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--accent-bg);padding:0 4px;border-radius:4px}
+footer{max-width:960px;margin:0 auto;padding:0 16px 24px;text-align:center;font-size:.8rem;color:var(--sub)}
+@media (max-width:640px){
+  .flow{flex-direction:column}
+  .step{flex-direction:column;align-items:stretch}
+  .arrow{flex:0 0 40px;width:100%}
+  .arrow svg{transform:rotate(90deg);width:40px;margin:0 auto}
+  .arrow{display:flex;justify-content:center}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>GitHub の道のり</h1>
+  <p class="lead">作ったものは 4 つのステップを進みます。ステップを押すと、その意味と気をつけることが読めます。</p>
+  <p class="hint">動く点は、作ったものが進む向きを示します。公開する前に、止まる関門があります。</p>
+  <ol class="flow" id="flow"></ol>
+  <section id="detail" aria-live="polite"></section>
+</main>
+<footer>CreateCodeBox で作成</footer>
+<script>
+(function(){
+  var STEPS=[
+    {n:"1",t:"パソコンの中のフォルダ",w:"いま作業している場所",
+     one:"あなた自身のパソコンの中にあるフォルダです。作ったものは、まずここに現れます。",
+     care:"パソコンが壊れると、このフォルダはなくなります。作ったものをセーブし、バックアップしてください。鍵とパスワードは、ワークスペースの外の `~/.createcodebox` に置きます。作っているアプリ用の鍵だけが `src/.env` に入ります。"},
+    {n:"2",t:"セーブ",w:"パソコンの中の記録",
+     one:"セーブは、いまの作業の状態を、短いメモ付きで記録します。記録は、あなたのパソコンの中に残ります。",
+     care:"記録する前に、ワークスペースが、決まった形式の鍵が混ざっていないかを確かめます。セーブは、あなたのパソコンの中だけで働くので、バックアップではありません。"},
+    {n:"3",t:"バックアップ",w:"GitHub の非公開の repo",
+     one:"バックアップは、セーブした記録を、ネット上の非公開の場所に送ります。誰が開けるかは、あなたが決めます。パソコンが壊れても、コピーは残ります。",
+     care:"repo は、必ず非公開にしてください。Git からサインインを求められたら、あなた自身が行います。トークンやパスワードを Claude に渡さないでください。このサインインは、まだ実際の GitHub では確かめられていません。"},
+    {n:"4",t:"公開",w:"誰でも見られる",gate:true,
+     one:"公開は、作ったものを、登録した repo に送ります。送ったあとに、あなたが GitHub のサイトで repo を公開にします。作ったものは、関門を通ったときだけ先へ進みます。",
+     care:"公開すると、誰でも、ファイルと履歴の全体を見られます。取り戻しにくいです。点検を通り、あなたが次のどちらかをそのまま打ったときだけ、先へ進みます: `publish` か「公開します」。迷ったら、非公開のままにしてください。"}
+  ];
+  var flow=document.getElementById("flow");
+  var detail=document.getElementById("detail");
+  var SVGNS="http://www.w3.org/2000/svg";
+  var boxes=[],dots=[];
+
+  function el(tag,cls,text){
+    var e=document.createElement(tag);
+    if(cls){e.className=cls;}
+    if(text!==undefined){e.textContent=text;}
+    return e;
+  }
+  function rich(parent,text){
+    text.split("`").forEach(function(part,i){
+      if(i%2===1){parent.appendChild(el("code",null,part));}
+      else if(part){parent.appendChild(document.createTextNode(part));}
+    });
+    return parent;
+  }
+  function svgEl(tag,attrs){
+    var e=document.createElementNS(SVGNS,tag);
+    for(var k in attrs){e.setAttribute(k,attrs[k]);}
+    return e;
+  }
+  function show(i){
+    var s=STEPS[i];
+    for(var j=0;j<boxes.length;j++){boxes[j].setAttribute("aria-pressed",j===i?"true":"false");}
+    detail.textContent="";
+    detail.appendChild(el("h2",null,s.n+". "+s.t+(s.gate?"（関門）":"")));
+    detail.appendChild(el("h3",null,"一言で"));
+    detail.appendChild(el("p",null,s.one));
+    detail.appendChild(el("h3",null,"気をつけること"));
+    detail.appendChild(rich(el("p"),s.care));
+  }
+  function makeArrow(){
+    var wrap=el("div","arrow");
+    wrap.setAttribute("aria-hidden","true");
+    var svg=svgEl("svg",{viewBox:"0 0 44 44"});
+    svg.appendChild(svgEl("line",{x1:"4",y1:"22",x2:"32",y2:"22"}));
+    svg.appendChild(svgEl("polygon",{points:"30,14 42,22 30,30"}));
+    var dot=svgEl("circle",{"class":"dot",cx:"4",cy:"22",r:"5"});
+    svg.appendChild(dot);
+    wrap.appendChild(svg);
+    dots.push(dot);
+    return wrap;
+  }
+
+  STEPS.forEach(function(s,i){
+    var li=el("li","step");
+    var b=el("button","box"+(s.gate?" gate":""));
+    b.type="button";
+    b.setAttribute("aria-pressed","false");
+    b.appendChild(el("span","n","ステップ "+s.n));
+    b.appendChild(el("span","t",s.t));
+    b.appendChild(el("span","w",s.w));
+    if(s.gate){b.appendChild(el("span","tag","関門: ここで止まります"));}
+    b.addEventListener("click",function(){show(i);});
+    boxes.push(b);
+    li.appendChild(b);
+    if(i<STEPS.length-1){li.appendChild(makeArrow());}
+    flow.appendChild(li);
+  });
+  show(0);
+
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)");
+  var raf=null,start=null;
+  function frame(ts){
+    if(start===null){start=ts;}
+    var p=((ts-start)%1800)/1800;
+    for(var i=0;i<dots.length;i++){
+      /* each dot starts a little later than the one before */
+      var q=(p+i*0.25)%1;
+      dots[i].setAttribute("cx",String(4+q*28));
+    }
+    raf=window.requestAnimationFrame(frame);
+  }
+  function apply(){
+    if(reduce&&reduce.matches){
+      if(raf!==null){window.cancelAnimationFrame(raf);raf=null;}
+      for(var i=0;i<dots.length;i++){dots[i].setAttribute("cx","18");}
+    }else if(raf===null){
+      start=null;
+      raf=window.requestAnimationFrame(frame);
+    }
+  }
+  apply();
+  if(reduce){
+    if(reduce.addEventListener){reduce.addEventListener("change",apply);}
+    else if(reduce.addListener){reduce.addListener(apply);}
+  }
+})();
+</script>
+</body>
+</html>

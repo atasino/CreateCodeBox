@@ -1,0 +1,828 @@
+{
+ "en": {
+  "jargon": [
+   {
+    "term": "directory",
+    "plain": "folder",
+    "note": ""
+   },
+   {
+    "term": "UI",
+    "plain": "what you see and click",
+    "note": ""
+   },
+   {
+    "term": "sandbox",
+    "plain": "a closed-off space that limits what a program can reach",
+    "note": ""
+   },
+   {
+    "term": "CLI",
+    "plain": "a tool you use by typing",
+    "note": ""
+   },
+   {
+    "term": "GitHub",
+    "plain": "GitHub (a website that keeps projects online)",
+    "note": "Say it with the explanation the first time."
+   },
+   {
+    "term": "git",
+    "plain": "a tool that keeps the saved versions of a project",
+    "note": ""
+   },
+   {
+    "term": "server",
+    "plain": "a computer that keeps an app running so other people can use it",
+    "note": ""
+   },
+   {
+    "term": "debug",
+    "plain": "find and fix what went wrong",
+    "note": ""
+   },
+   {
+    "term": "log",
+    "plain": "a record of what the app did",
+    "note": ""
+   },
+   {
+    "term": "cache",
+    "plain": "a saved copy that helps pages load faster",
+    "note": ""
+   },
+   {
+    "term": "revert",
+    "plain": "go back to an earlier saved version",
+    "note": ""
+   },
+   {
+    "term": "merge conflict",
+    "plain": "two changes to the same part that the computer cannot join by itself",
+    "note": ""
+   },
+   {
+    "term": "production",
+    "plain": "the live version that real people use",
+    "note": ""
+   },
+   {
+    "term": "staging",
+    "plain": "a practice copy of the live version, for a last check",
+    "note": ""
+   },
+   {
+    "term": "function",
+    "plain": "a named set of steps in the code",
+    "note": ""
+   },
+   {
+    "term": "repository (repo)",
+    "plain": "a project folder with all its saved versions",
+    "note": ""
+   },
+   {
+    "term": "commit",
+    "plain": "save a version of your work (a snapshot you can go back to)",
+    "note": "Use the workspace word: save. Plain \"save\" alone can be mixed up with Ctrl+S."
+   },
+   {
+    "term": "push",
+    "plain": "upload to GitHub",
+    "note": ""
+   },
+   {
+    "term": "pull",
+    "plain": "download the latest version from GitHub",
+    "note": ""
+   },
+   {
+    "term": "clone",
+    "plain": "copy a project from GitHub to your computer",
+    "note": ""
+   },
+   {
+    "term": "branch",
+    "plain": "a separate copy of the work, for trying changes",
+    "note": ""
+   },
+   {
+    "term": "merge",
+    "plain": "add the changes to the main copy",
+    "note": ""
+   },
+   {
+    "term": "deploy",
+    "plain": "put it online so other people can use it",
+    "note": ""
+   },
+   {
+    "term": "dependency",
+    "plain": "code from someone else that your app uses",
+    "note": ""
+   },
+   {
+    "term": "environment variable",
+    "plain": "a setting kept outside the app, such as a secret code",
+    "note": ""
+   },
+   {
+    "term": "API",
+    "plain": "a way for the app to ask another service for something",
+    "note": ""
+   },
+   {
+    "term": "API key",
+    "plain": "a secret code that lets your app use a service",
+    "note": "Never show or ask for the value."
+   },
+   {
+    "term": "token",
+    "plain": "a secret code that shows who you are to a service",
+    "note": "Never show or ask for the value."
+   },
+   {
+    "term": "endpoint",
+    "plain": "the web address where a service takes requests",
+    "note": ""
+   },
+   {
+    "term": "schema",
+    "plain": "the list of items and what each one holds",
+    "note": ""
+   },
+   {
+    "term": "frontend",
+    "plain": "the part people see and click",
+    "note": ""
+   },
+   {
+    "term": "backend",
+    "plain": "the part that works behind the scenes",
+    "note": ""
+   },
+   {
+    "term": "runtime",
+    "plain": "the program that runs your code",
+    "note": ""
+   },
+   {
+    "term": "build",
+    "plain": "put the pieces together so the app can run",
+    "note": "Not the workspace step called build: that is \"making the app\"."
+   },
+   {
+    "term": "lint",
+    "plain": "an automatic check for small mistakes in the code",
+    "note": ""
+   },
+   {
+    "term": "render",
+    "plain": "show on the screen",
+    "note": ""
+   },
+   {
+    "term": "hook",
+    "plain": "a step that runs by itself when something happens",
+    "note": "If it is the workspace's own hook, see the internal table."
+   },
+   {
+    "term": "parse",
+    "plain": "read the text and pick out the parts",
+    "note": ""
+   },
+   {
+    "term": "JSON",
+    "plain": "a text file that lists items and their values",
+    "note": ""
+   },
+   {
+    "term": "localhost",
+    "plain": "your own computer",
+    "note": ""
+   },
+   {
+    "term": "port",
+    "plain": "the number in the address that tells the computer which program to talk to",
+    "note": ""
+   },
+   {
+    "term": "npm",
+    "plain": "the tool that downloads code from others for your app",
+    "note": ""
+   },
+   {
+    "term": "framework",
+    "plain": "code that gives your app a ready base to build on",
+    "note": ""
+   },
+   {
+    "term": "database",
+    "plain": "the place where the app keeps its information",
+    "note": ""
+   },
+   {
+    "term": "query",
+    "plain": "a request for some of the stored information",
+    "note": ""
+   },
+   {
+    "term": "authentication",
+    "plain": "signing in",
+    "note": ""
+   },
+   {
+    "term": "authorization",
+    "plain": "what a person is allowed to do",
+    "note": ""
+   },
+   {
+    "term": "permission",
+    "plain": "what you let the app do",
+    "note": ""
+   },
+   {
+    "term": "terminal",
+    "plain": "the window where you type a command",
+    "note": "Matches the learn card `terminal`."
+   },
+   {
+    "term": "path",
+    "plain": "the address of a file on your computer",
+    "note": "Matches the learn card `folder`."
+   },
+   {
+    "term": "script",
+    "plain": "a saved list of steps the computer runs",
+    "note": ""
+   },
+   {
+    "term": "bug",
+    "plain": "a mistake in the program",
+    "note": ""
+   },
+   {
+    "term": "error message",
+    "plain": "the message that says what went wrong",
+    "note": ""
+   }
+  ],
+  "internal": [
+   {
+    "term": "R0",
+    "plain": "the start",
+    "note": "Stage code."
+   },
+   {
+    "term": "R1",
+    "plain": "the first questions",
+    "note": "Stage code."
+   },
+   {
+    "term": "R2",
+    "plain": "the follow-up questions",
+    "note": "Stage code."
+   },
+   {
+    "term": "R3",
+    "plain": "the design step",
+    "note": "Stage code."
+   },
+   {
+    "term": "R4",
+    "plain": "the step where we write the table of what goes in and out",
+    "note": "Stage code."
+   },
+   {
+    "term": "R4A",
+    "plain": "the approval step",
+    "note": "Stage code."
+   },
+   {
+    "term": "RS",
+    "plain": "the plan for building",
+    "note": "Stage code."
+   },
+   {
+    "term": "RUN",
+    "plain": "the building step",
+    "note": "Stage code."
+   },
+   {
+    "term": "DONE",
+    "plain": "the finished first version",
+    "note": "Stage code."
+   },
+   {
+    "term": "slug",
+    "plain": "the folder name",
+    "note": ""
+   },
+   {
+    "term": "tentative:",
+    "plain": "my guess (not confirmed yet)",
+    "note": "The mark stays in the file. In chat, say it as a guess."
+   },
+   {
+    "term": "io.json",
+    "plain": "the table of what goes in and what comes out",
+    "note": ""
+   },
+   {
+    "term": "brief.md",
+    "plain": "the design notes",
+    "note": ""
+   },
+   {
+    "term": "PROJECT.md",
+    "plain": "your project notes (the answers you gave)",
+    "note": ""
+   },
+   {
+    "term": "sketch",
+    "plain": "a first rough version",
+    "note": "Existing rule: never say sketch to the user."
+   },
+   {
+    "term": "hook",
+    "plain": "a check in the workspace that runs by itself",
+    "note": "Workspace's own hooks only."
+   },
+   {
+    "term": "engine",
+    "plain": "the workspace",
+    "note": ""
+   },
+   {
+    "term": "pm",
+    "plain": "I",
+    "note": "Agent name."
+   },
+   {
+    "term": "designer",
+    "plain": "I",
+    "note": "Agent name."
+   },
+   {
+    "term": "builder",
+    "plain": "I",
+    "note": "Agent name."
+   },
+   {
+    "term": "reviewer",
+    "plain": "a second check",
+    "note": "Agent name."
+   },
+   {
+    "term": "connector",
+    "plain": "I read the text you shared",
+    "note": "Agent name."
+   }
+  ],
+  "avoid": [
+   {
+    "term": "basically",
+    "plain": "(do not say it)",
+    "note": ""
+   },
+   {
+    "term": "of course",
+    "plain": "(do not say it)",
+    "note": ""
+   },
+   {
+    "term": "straightforward",
+    "plain": "(do not say it)",
+    "note": ""
+   },
+   {
+    "term": "quickly",
+    "plain": "(do not say it about the user's task)",
+    "note": ""
+   },
+   {
+    "term": "beginner",
+    "plain": "(do not call the user this)",
+    "note": ""
+   },
+   {
+    "term": "easy",
+    "plain": "(do not say it)",
+    "note": ""
+   },
+   {
+    "term": "simple",
+    "plain": "(do not say it about the user's task)",
+    "note": ""
+   },
+   {
+    "term": "just",
+    "plain": "(do not use it to shrink a step)",
+    "note": ""
+   },
+   {
+    "term": "obviously",
+    "plain": "(do not say it)",
+    "note": ""
+   }
+  ]
+ },
+ "ja": {
+  "jargon": [
+   {
+    "term": "ディレクトリ",
+    "plain": "フォルダ",
+    "note": ""
+   },
+   {
+    "term": "UI",
+    "plain": "画面に見えて、押したり打ったりする部分",
+    "note": ""
+   },
+   {
+    "term": "サンドボックス",
+    "plain": "プログラムが手を出せる範囲を区切った場所",
+    "note": ""
+   },
+   {
+    "term": "CLI",
+    "plain": "文字を打って使う道具",
+    "note": ""
+   },
+   {
+    "term": "GitHub",
+    "plain": "GitHub（プロジェクトをネット上に置いておく Web サービス）",
+    "note": "初めて言うときは、この説明といっしょに言う。"
+   },
+   {
+    "term": "Git",
+    "plain": "プロジェクトの変更の記録を残すための道具",
+    "note": ""
+   },
+   {
+    "term": "コード",
+    "plain": "プログラムの中身を書き表した文字",
+    "note": ""
+   },
+   {
+    "term": "コマンド",
+    "plain": "パソコンに打ち込む命令の 1 行",
+    "note": ""
+   },
+   {
+    "term": "リモート",
+    "plain": "ネット上（GitHub など）にある側のコピー",
+    "note": ""
+   },
+   {
+    "term": "サーバー",
+    "plain": "アプリを動かし続けて、他のパソコンからの求めに応じるパソコン",
+    "note": ""
+   },
+   {
+    "term": "ライブラリ",
+    "plain": "他の人が作った、使い回せるプログラムの部品のまとまり（1 つ分ずつ配られる）",
+    "note": ""
+   },
+   {
+    "term": "ログ",
+    "plain": "動いたときの出来事の記録",
+    "note": ""
+   },
+   {
+    "term": "キャッシュ",
+    "plain": "速く開くために取っておいたコピー",
+    "note": ""
+   },
+   {
+    "term": "ロールバック",
+    "plain": "前の状態に戻す",
+    "note": ""
+   },
+   {
+    "term": "リポジトリ",
+    "plain": "プロジェクトの保管場所（GitHub 上のフォルダ）",
+    "note": ""
+   },
+   {
+    "term": "コミット",
+    "plain": "変更を記録する（あとで戻れる地点を残す）",
+    "note": "ワークスペースの言葉「セーブ」と同じ。"
+   },
+   {
+    "term": "プッシュ",
+    "plain": "GitHub に送る",
+    "note": ""
+   },
+   {
+    "term": "プル",
+    "plain": "GitHub から最新のものを取ってくる",
+    "note": ""
+   },
+   {
+    "term": "クローン",
+    "plain": "GitHub のプロジェクトを、自分のパソコンにコピーする",
+    "note": ""
+   },
+   {
+    "term": "ブランチ",
+    "plain": "試すための、別のコピー",
+    "note": ""
+   },
+   {
+    "term": "マージ",
+    "plain": "別のコピーでの変更を、元のものに取り入れる",
+    "note": ""
+   },
+   {
+    "term": "デプロイ",
+    "plain": "ネットに公開して、使える状態にする",
+    "note": ""
+   },
+   {
+    "term": "依存関係",
+    "plain": "アプリが借りている部品",
+    "note": ""
+   },
+   {
+    "term": "環境変数",
+    "plain": "アプリの外に置く設定（パスワードのようなものなど）",
+    "note": ""
+   },
+   {
+    "term": "API",
+    "plain": "アプリどうしがやりとりするための窓口",
+    "note": ""
+   },
+   {
+    "term": "API キー",
+    "plain": "サービスを使うための、パスワードのようなもの（人に見せない）",
+    "note": "値を見せない・聞かない。"
+   },
+   {
+    "term": "トークン",
+    "plain": "ログインした印になる、パスワードのような文字列",
+    "note": "値を見せない・聞かない。"
+   },
+   {
+    "term": "エンドポイント",
+    "plain": "サービスが依頼を受け付けるアドレス",
+    "note": ""
+   },
+   {
+    "term": "スキーマ",
+    "plain": "項目の一覧と、それぞれに入るもの",
+    "note": ""
+   },
+   {
+    "term": "フロントエンド",
+    "plain": "画面に見えて、押せる部分",
+    "note": ""
+   },
+   {
+    "term": "バックエンド",
+    "plain": "裏で動く部分",
+    "note": ""
+   },
+   {
+    "term": "ランタイム",
+    "plain": "プログラムを動かすための土台になるソフト",
+    "note": ""
+   },
+   {
+    "term": "ビルド",
+    "plain": "部品をまとめて、アプリが動く形にする",
+    "note": "ワークスペースの段階の「作る」とは別。"
+   },
+   {
+    "term": "リント",
+    "plain": "プログラムの小さな間違いを、自動でチェックする仕組み",
+    "note": ""
+   },
+   {
+    "term": "レンダリング",
+    "plain": "画面に描く",
+    "note": ""
+   },
+   {
+    "term": "フック",
+    "plain": "決まったタイミングで自動で動く処理",
+    "note": "ワークスペース自身のフックは内部の表を見る。"
+   },
+   {
+    "term": "JSON",
+    "plain": "項目とその内容を並べて書いた、文字だけのファイル",
+    "note": ""
+   },
+   {
+    "term": "ローカルホスト",
+    "plain": "自分のパソコン",
+    "note": ""
+   },
+   {
+    "term": "ポート",
+    "plain": "どのアプリにつなぐかの印",
+    "note": ""
+   },
+   {
+    "term": "npm",
+    "plain": "アプリの部品をダウンロードする道具",
+    "note": ""
+   },
+   {
+    "term": "フレームワーク",
+    "plain": "アプリを作る土台になる、できあいの枠組み",
+    "note": ""
+   },
+   {
+    "term": "データベース",
+    "plain": "アプリが情報をしまっておく場所",
+    "note": ""
+   },
+   {
+    "term": "クエリ",
+    "plain": "しまってある情報への問い合わせ",
+    "note": ""
+   },
+   {
+    "term": "認証",
+    "plain": "ログイン（本人かどうかの確認）",
+    "note": ""
+   },
+   {
+    "term": "認可",
+    "plain": "その人に何を許すかの決まり",
+    "note": ""
+   },
+   {
+    "term": "権限",
+    "plain": "その人にできると許されている操作の範囲",
+    "note": ""
+   },
+   {
+    "term": "ターミナル",
+    "plain": "文字を打って命令するウィンドウ",
+    "note": "学びカード `terminal` と同じ。"
+   },
+   {
+    "term": "パス",
+    "plain": "ファイルの場所を示す道順",
+    "note": "学びカード `folder` と同じ。"
+   },
+   {
+    "term": "スクリプト",
+    "plain": "パソコンが順に行う、短い手順のプログラム",
+    "note": ""
+   },
+   {
+    "term": "バグ",
+    "plain": "プログラムの間違い",
+    "note": ""
+   },
+   {
+    "term": "エラーメッセージ",
+    "plain": "うまくいかなかった理由を知らせる文",
+    "note": ""
+   }
+  ],
+  "internal": [
+   {
+    "term": "R0",
+    "plain": "はじめ",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "R1",
+    "plain": "最初の質問",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "R2",
+    "plain": "確認の質問",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "R3",
+    "plain": "見た目の確認",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "R4",
+    "plain": "入るものと出るものの表を作る段階",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "R4A",
+    "plain": "承認の段階",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "RS",
+    "plain": "作る計画",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "RUN",
+    "plain": "作っている段階",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "DONE",
+    "plain": "最初の版の完成",
+    "note": "段階の記号。"
+   },
+   {
+    "term": "slug",
+    "plain": "フォルダの名前",
+    "note": ""
+   },
+   {
+    "term": "tentative:",
+    "plain": "仮の案（まだ確かめていません）",
+    "note": "印はファイルに残す。チャットでは「仮の案」と言う。"
+   },
+   {
+    "term": "io.json",
+    "plain": "入るものと出るものの表",
+    "note": ""
+   },
+   {
+    "term": "brief.md",
+    "plain": "設計のメモ",
+    "note": ""
+   },
+   {
+    "term": "PROJECT.md",
+    "plain": "プロジェクトのメモ（あなたの答え）",
+    "note": ""
+   },
+   {
+    "term": "sketch",
+    "plain": "試作品（プロトタイプ）、または最初の下書きの絵",
+    "note": "既存の規則: 利用者に sketch と言わない。README のプロトタイプの語と合わせる。"
+   },
+   {
+    "term": "hook",
+    "plain": "ワークスペースの自動チェック",
+    "note": "ワークスペース自身のフックだけ。"
+   },
+   {
+    "term": "engine",
+    "plain": "ワークスペース",
+    "note": ""
+   },
+   {
+    "term": "pm",
+    "plain": "私",
+    "note": "エージェント名。"
+   },
+   {
+    "term": "designer",
+    "plain": "私",
+    "note": "エージェント名。"
+   },
+   {
+    "term": "builder",
+    "plain": "私",
+    "note": "エージェント名。"
+   },
+   {
+    "term": "reviewer",
+    "plain": "別の確認役",
+    "note": "エージェント名。"
+   },
+   {
+    "term": "connector",
+    "plain": "あなたが渡した文を、私が読む",
+    "note": "エージェント名。"
+   }
+  ],
+  "avoid": [
+   {
+    "term": "初心者",
+    "plain": "（利用者をこう呼ばない）",
+    "note": ""
+   },
+   {
+    "term": "簡単",
+    "plain": "（言わない）",
+    "note": ""
+   },
+   {
+    "term": "すぐできる",
+    "plain": "（言わない）",
+    "note": ""
+   },
+   {
+    "term": "〜するだけ",
+    "plain": "（手順を軽く見せる言い方はしない）",
+    "note": ""
+   },
+   {
+    "term": "当然",
+    "plain": "（言わない）",
+    "note": ""
+   }
+  ]
+ }
+}

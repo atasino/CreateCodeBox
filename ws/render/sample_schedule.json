@@ -1,0 +1,15 @@
+{
+  "project": "Simple budget",
+  "stage": "R3",
+  "rows": [
+    {"id":"S-01","title":"Ask who will use it and why","status":"done","done_when":"You can say what it is for in one sentence","artifact":"goal/GOAL.md","note":""},
+    {"id":"S-02","title":"Decide the border between inputs and outputs","status":"done","done_when":"What comes in and what goes out is on a list","artifact":"design/IO.md","note":""},
+    {"id":"S-03","title":"Compare 3 ideas side by side","status":"done","done_when":"The user chose one","artifact":"prd/OPTIONS.md","note":""},
+    {"id":"S-04","title":"Decide how the screen looks","status":"doing","done_when":"The user said \"looks good\"","artifact":"design/screens/","note":""},
+    {"id":"S-05","title":"Decide how the data is kept","status":"todo","done_when":"Every item to be saved is written down","artifact":"design/DATA.md","note":""},
+    {"id":"S-06","title":"Make the input screen and saving","status":"todo","done_when":"Enter one record, reopen the app, and it is still there","artifact":"src/input/","note":""},
+    {"id":"S-07","title":"Make the total chart","status":"todo","done_when":"The monthly totals show as a chart","artifact":"src/report/","note":""},
+    {"id":"S-08","title":"Screen for phones","status":"hold","done_when":"Input and totals work on a phone","artifact":"src/mobile/","note":"First make it work on the user's own computer. Waiting for the user to decide."},
+    {"id":"S-09","title":"Run it by hand and check","status":"todo","done_when":"The user entered one week of records and could use it","artifact":"ws/RUN.md","note":""}
+  ]
+}

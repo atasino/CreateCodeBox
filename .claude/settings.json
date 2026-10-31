@@ -1,0 +1,96 @@
+{
+  "agent": "pm",
+  "permissions": {
+    "allow": [
+      "Bash(bash ws/bin/ws.sh status)",
+      "Bash(bash ws/bin/ws.sh status:*)",
+      "Bash(bash ws/bin/ws.sh list)",
+      "Bash(bash ws/bin/ws.sh list:*)",
+      "Bash(bash ws/bin/ws.sh select)",
+      "Bash(bash ws/bin/ws.sh select:*)",
+      "Bash(bash ws/bin/ws.sh new)",
+      "Bash(bash ws/bin/ws.sh new:*)",
+      "Bash(bash ws/bin/ws.sh lint)",
+      "Bash(bash ws/bin/ws.sh lint:*)",
+      "Bash(bash ws/bin/ws.sh render)",
+      "Bash(bash ws/bin/ws.sh render:*)",
+      "Bash(bash ws/bin/ws.sh open)",
+      "Bash(bash ws/bin/ws.sh open:*)",
+      "Bash(bash ws/bin/ws.sh learn)",
+      "Bash(bash ws/bin/ws.sh learn:*)",
+      "Bash(bash ws/bin/ws.sh mark)",
+      "Bash(bash ws/bin/ws.sh mark:*)",
+      "Bash(bash ws/bin/ws.sh st list)",
+      "Bash(bash ws/bin/ws.sh st list:*)",
+      "Bash(bash ws/bin/ws.sh st mark)",
+      "Bash(bash ws/bin/ws.sh st mark:*)",
+      "Bash(bash ws/bin/ws.sh st init)",
+      "Bash(bash ws/bin/ws.sh st init:*)",
+      "Bash(bash ws/bin/ws.sh schedule-init)",
+      "Bash(bash ws/bin/ws.sh schedule-init:*)",
+      "Bash(bash ws/bin/ws.sh doctor)",
+      "Bash(bash ws/bin/ws.sh doctor:*)",
+      "Bash(bash ws/bin/ws.sh version)",
+      "Bash(bash ws/bin/ws.sh version:*)",
+      "Bash(bash ws/bin/ws.sh lang)",
+      "Bash(bash ws/bin/ws.sh lang:*)",
+      "Bash(bash ws/bin/ws.sh task)",
+      "Bash(bash ws/bin/ws.sh task:*)",
+      "Bash(bash ws/bin/ws.sh tasks)",
+      "Bash(bash ws/bin/ws.sh tasks:*)",
+      "Bash(bash ws/bin/ws.sh repo email)",
+      "Bash(bash ws/bin/ws.sh repo email:*)",
+      "Edit(projects/**)",
+      "Write(projects/**)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/ws/bin/hook.sh\" sessionstart || exit 0"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/ws/bin/hook.sh\" prompt || exit 2"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Bash|Read|NotebookRead|Grep|Glob|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/ws/bin/hook.sh\" pretool || exit 2"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/ws/bin/hook.sh\" stop || exit 0"
+          }
+        ]
+      }
+    ]
+  },
+  "claudeMdExcludes": [
+    "**/projects/*/src/CLAUDE.md",
+    "**/projects/*/src/**/CLAUDE.md",
+    "**/projects/*/src/CLAUDE.local.md",
+    "**/projects/*/src/**/CLAUDE.local.md"
+  ]
+}

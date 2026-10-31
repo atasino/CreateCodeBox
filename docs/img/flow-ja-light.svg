@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:lang="ja" lang="ja" viewBox="0 0 800 988" width="800" height="988" role="img" aria-labelledby="t d" font-family='system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Noto Sans", sans-serif'>
+<title id="t">準備のあと: 6 つの段階</title>
+<desc id="d">準備のあとの CreateCodeBox の進み方（6 つの段階）。聞く: 作りたいものを伝えます。参考: 近いサイトやアプリを伝えます。プロトタイプ: いちばん違う所を伝え、looks good と打ちます。承認: approve と打ちます。作る: Claude が 1 ステップずつ作ります。確かめる: うまくいった番号を Claude に伝えます。</desc>
+<rect width="800" height="988" rx="24" fill="#f7f8fa"/>
+<text x="28" y="62" font-size="32" font-weight="700" fill="#1d2330">準備のあと: 6 つの段階</text>
+<text x="28" y="115.4" font-size="24" fill="#4b5565">Claude</text>
+<rect x="131" y="90" width="154" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="139" y="115.4" font-size="24" fill="#1d2330">あなたの番</text>
+<rect x="28" y="148" width="262" height="94" rx="16" fill="#2457d6"/>
+<text x="159" y="191" font-size="32" font-weight="700" text-anchor="middle" fill="#ffffff">聞く</text>
+<text x="159" y="219" font-size="22" text-anchor="middle" fill="#ffffff">Ask</text>
+<text x="308" y="183.4" font-size="24" fill="#4b5565">短い質問をします</text>
+<rect x="308" y="196" width="292" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="316" y="221.4" font-size="24" fill="#1d2330">作りたいものを伝える</text>
+<path d="M159 246 V274 M151 265 L159 274 L167 265" fill="none" stroke="#2457d6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="278" width="262" height="94" rx="16" fill="#2457d6"/>
+<text x="159" y="321" font-size="32" font-weight="700" text-anchor="middle" fill="#ffffff">参考</text>
+<text x="159" y="349" font-size="22" text-anchor="middle" fill="#ffffff">Reference</text>
+<text x="308" y="313.4" font-size="24" fill="#4b5565">近いサイトやアプリを聞きます</text>
+<rect x="308" y="326" width="375" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="316" y="351.4" font-size="24" fill="#1d2330">近いサイトやアプリを伝える</text>
+<path d="M159 376 V404 M151 395 L159 404 L167 395" fill="none" stroke="#2457d6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="408" width="262" height="122" rx="20.7" fill="#2457d6"/>
+<text x="159" y="465" font-size="32" font-weight="700" text-anchor="middle" fill="#ffffff">プロトタイプ</text>
+<text x="159" y="493" font-size="22" text-anchor="middle" fill="#ffffff">Prototype</text>
+<text x="308" y="443.4" font-size="24" fill="#4b5565">画面の最初の版を見せます</text>
+<rect x="308" y="456" width="320" height="62" rx="10.5" fill="#ffb55e"/>
+<text x="316" y="481.4" font-size="24" fill="#1d2330">いちばん違う所を伝え、</text>
+<text x="316" y="509.4" font-size="24" fill="#1d2330"><tspan font-family='ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace'>looks good</tspan> と打つ</text>
+<path d="M159 534 V562 M151 553 L159 562 L167 553" fill="none" stroke="#2457d6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="566" width="262" height="94" rx="16" fill="#2457d6"/>
+<text x="159" y="609" font-size="32" font-weight="700" text-anchor="middle" fill="#ffffff">承認</text>
+<text x="159" y="637" font-size="22" text-anchor="middle" fill="#ffffff">Approve</text>
+<text x="308" y="601.4" font-size="24" fill="#4b5565">表と設計を見せます</text>
+<rect x="308" y="614" width="232" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="316" y="639.4" font-size="24" fill="#1d2330"><tspan font-family='ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace'>approve</tspan> と打つ</text>
+<path d="M159 664 V692 M151 683 L159 692 L167 683" fill="none" stroke="#2457d6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="696" width="262" height="84" rx="14.3" fill="#2457d6"/>
+<text x="159" y="734" font-size="32" font-weight="700" text-anchor="middle" fill="#ffffff">作る</text>
+<text x="159" y="762" font-size="22" text-anchor="middle" fill="#ffffff">Build</text>
+<text x="308" y="746.4" font-size="24" fill="#4b5565">1 ステップずつ作ります</text>
+<path d="M159 784 V812 M151 803 L159 812 L167 803" fill="none" stroke="#2457d6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="28" y="816" width="262" height="94" rx="16" fill="#2457d6"/>
+<text x="159" y="859" font-size="32" font-weight="700" text-anchor="middle" fill="#ffffff">確かめる</text>
+<text x="159" y="887" font-size="22" text-anchor="middle" fill="#ffffff">Check</text>
+<text x="308" y="851.4" font-size="24" fill="#4b5565">番号つきの確認項目を出します</text>
+<rect x="308" y="864" width="347" height="34" rx="5.8" fill="#ffb55e"/>
+<text x="316" y="889.4" font-size="24" fill="#1d2330">うまくいった番号を伝える</text>
+<text x="28" y="956.7" font-size="22" fill="#4b5565">ほかに、短い質問が入ることがあります。</text>
+</svg>
