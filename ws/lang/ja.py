@@ -183,7 +183,7 @@ MESSAGES = {
     "deny.project_write": "PROJECT.md を直すときは、Edit で 1 行だけ変えてください。Write だと、ほかの key が消えてしまいます。",
     "place.ok": "place: ok",
     "place.warn": "place: warn {reason}。{fix}",
-    "place.fix": "フォルダを ~/CreateCodeBox に移して、そこで claude を起動してください。",
+    "place.fix": "ホームフォルダの中に、英字・数字・`-` だけで空白のない名前の、アプリ用の新しい空のフォルダを作り（デスクトップ・書類・ダウンロード・同期フォルダの中は避けます）、そこで CreateCodeBox を設定し直してください。ユーザー名に空白や日本語が入っているときは、Windows では C:\\ の、Mac では /Users/Shared/ のすぐ下のフォルダを使ってください。",
     "place.why.userfolder": "このワークスペースは {name} の中にあります（同期や自動の整理の対象になりやすい場所です）",
     "place.why.cloud": "このワークスペースは {name} が同期するフォルダの中にあります（.ws/ の記録が壊れることがあります）",
     "place.why.chars": "パスに空白か日本語などの文字があります（コマンドが壊れることがあります）",

@@ -534,7 +534,7 @@ def test_hooks_g1():
         check("A2: サブコマンド単位の許可がそろう（+ Edit/Write(projects/**)）", all(("Bash(bash ws/bin/ws.sh %s:*)" % n in allow and "Bash(bash ws/bin/ws.sh %s)" % n in allow) for n in need)
               and "Edit(projects/**)" in allow and "Write(projects/**)" in allow, allow)
         check(".gitignore に .ws/ と .env 系が入っている", ".ws/" in open(os.path.join(e.root, ".gitignore")).read().split() and ".env.*" in open(os.path.join(e.root, ".gitignore")).read())
-        check("ws/VERSION は 0.4.3", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.3")
+        check("ws/VERSION は 0.4.4", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.4")
         check("ws.sh: python が無いと日英の案内で exit 1", subprocess.run(["/bin/sh", os.path.join(e.root, "ws", "bin", "ws.sh"), "version"], capture_output=True, env={"PATH": empty, "HOME": e.home}).returncode == 1)
     finally:
         e.close()
@@ -919,21 +919,21 @@ def test_place():
         check("8-B: ホームの外（$HOME 配下でない）は warn", s == "warn" and "outside your home folder" in why, why)
         odd_home = os.path.join(base, "ホーム 名")
         os.makedirs(odd_home, exist_ok=True)
-        for alt in ("/Users/Shared/CreateCodeBox", "/c/CreateCodeBox"):
+        for alt in ("/Users/Shared/coffee-log", "/c/coffee-log", "/Users/Shared/CreateCodeBox"):
             s, why = en.place_check(alt, home=odd_home)
             check("8-B: ホームのパスに空白か非 ASCII があるとき、%s は「ホームの外」の警告を出さない（他の条件が無ければ ok）" % alt, s == "ok" and why == "", (s, why))
             s, why = en.place_check(alt, home=home)
             check("8-B: ホームのパスが普通のときは、%s は今までどおり「ホームの外」の警告" % alt, s == "warn" and "outside your home folder" in why, (s, why))
-        check("8-B: Windows の C:/CreateCodeBox も同じ置き場（drive 文字つき）", en.safe_alt_place("C:/CreateCodeBox", "C:/Users/山田") and en.safe_alt_place("D:/CreateCodeBox", "C:/Users/a b")
-              and not en.safe_alt_place("C:/CreateCodeBox", "C:/Users/yamada"))
-        s, why = en.place_check("/Users/Shared/Other/CreateCodeBox", home=odd_home)
+        check("8-B: Windows の C:/<アプリの名前> も同じ置き場（drive 文字つき）", en.safe_alt_place("C:/coffee-log", "C:/Users/山田") and en.safe_alt_place("D:/CreateCodeBox", "C:/Users/a b")
+              and not en.safe_alt_place("C:/coffee-log", "C:/Users/yamada") and not en.safe_alt_place("C:/Program Files", "C:/Users/山田"))
+        s, why = en.place_check("/Users/Shared/Other/coffee-log", home=odd_home)
         check("8-B: 決めた置き場以外（別の深さ）は、ホームが変でも「ホームの外」の警告のまま", s == "warn" and "outside your home folder" in why, (s, why))
-        s, why = en.place_check("/Users/Shared/CreateCodeBox 2", home=odd_home)
+        s, why = en.place_check("/Users/Shared/coffee log", home=odd_home)
         check("8-B: 置き場の名前が違う・空白つきなら、ホームが変でも警告のまま", s == "warn" and "outside your home folder" in why and "space" in why, (s, why))
         s, why = chk(mk("Downloads", "my ws"))
         check("8-B: 理由が複数あれば全て出る", s == "warn" and "Downloads" in why and "space" in why, why)
-        check("8-B: place の行は warn のとき理由と移し方の 1 行（Move the folder to ~/CreateCodeBox and start claude there.）",
-              en.place_line(outside, home=home).startswith("place: warn ") and en.place_line(outside, home=home).endswith("Move the folder to ~/CreateCodeBox and start claude there.")
+        check("8-B: place の行は warn のとき理由と移し方の 1 行（Make a new empty folder for your app …）",
+              en.place_line(outside, home=home).startswith("place: warn ") and en.place_line(outside, home=home).endswith("on a Mac right under /Users/Shared/.")
               and en.place_line(ok_dir, home=home) == "place: ok")
     finally:
         shutil.rmtree(base, ignore_errors=True)
@@ -947,9 +947,9 @@ def test_place():
         os.makedirs(e.p(".ws"), exist_ok=True)
         open(e.p(".ws", "lang"), "w").write("ja\n")
         c = e.ctx("sessionstart", {"source": "startup"})
-        check("8-B（第 2 回）: .ws/lang が ja なら SessionStart の place の行は ja（理由と移し方）", "place: warn " in c and "ホームフォルダの外" in c and "outside your home folder" not in c and "Move the folder" not in c, c[:400])
+        check("8-B（第 2 回）: .ws/lang が ja なら SessionStart の place の行は ja（理由と移し方）", "place: warn " in c and "ホームフォルダの外" in c and "outside your home folder" not in c and "Make a new empty folder" not in c, c[:400])
         out = e.run(["doctor"])[1]
-        check("8-B（第 2 回）: .ws/lang が ja なら doctor の place の行も ja", "ホームフォルダの外" in out and "Move the folder" not in out, out)
+        check("8-B（第 2 回）: .ws/lang が ja なら doctor の place の行も ja", "ホームフォルダの外" in out and "Make a new empty folder" not in out, out)
         sys.path.insert(0, os.path.join(TEMPLATE, "ws"))
         import engine as en_mod
         import lang as lg_mod
@@ -961,7 +961,7 @@ def test_place():
         check("8-B: warn は止めない（hook は普通に動く）", "[CreateCodeBox" in c and e.pre("Bash", command="ls") is None)
         e.env["CREATECODEBOX_LANG"] = "ja"
         out = e.run(["doctor"])[1]
-        check("8-B: ja の place の文（place: warn の印は同じ・理由と移し方は ja）", "place: warn " in out and "ホームフォルダの外" in out and "~/CreateCodeBox に移して" in out, out)
+        check("8-B: ja の place の文（place: warn の印は同じ・理由と移し方は ja）", "place: warn " in out and "ホームフォルダの外" in out and "アプリ用の新しい空のフォルダ" in out, out)
     finally:
         e.close()
 

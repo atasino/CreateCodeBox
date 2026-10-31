@@ -182,7 +182,7 @@ MESSAGES = {
     "deny.project_write": "Use Edit to change one line of PROJECT.md. Write would drop the other keys.",
     "place.ok": "place: ok",
     "place.warn": "place: warn {reason}. {fix}",
-    "place.fix": "Move the folder to ~/CreateCodeBox and start claude there.",
+    "place.fix": "Make a new empty folder for your app in your home folder (English letters, no spaces, not in Desktop, Documents, Downloads, or a synced folder), and set CreateCodeBox up there. If your user name has a space or non-English letters, use a folder right under C:\\ on Windows, or on a Mac right under /Users/Shared/.",
     "place.why.userfolder": "the workspace is in {name}, which is often synced or cleaned up",
     "place.why.cloud": "the workspace is in a folder synced by {name}, so the records in .ws/ can break",
     "place.why.chars": "the path has a space or a non-ASCII character, which can break commands",

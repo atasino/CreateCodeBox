@@ -806,13 +806,13 @@ def codex_lines(root, home=None):
     return lines
 
 
-SAFE_ALT_PLACE = re.compile(r"^(?:[A-Za-z]:|/[A-Za-z]|/Users/Shared)/CreateCodeBox$")
+SAFE_ALT_PLACE = re.compile(r"^(?:[A-Za-z]:|/[A-Za-z]|/Users/Shared)/[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 def safe_alt_place(p, h):
-    """The fixed place for a home folder whose path has a space or a non-ASCII character (for example C:\\Users\\<Japanese name>):
-    C:/CreateCodeBox (Git Bash: /c/CreateCodeBox) on Windows, /Users/Shared/CreateCodeBox on a Mac. It is outside the home folder
-    on purpose, so that is not warned. The path must be plain ASCII with no space."""
+    """The place for a home folder whose path has a space or a non-ASCII character (for example C:\\Users\\<Japanese name>):
+    a folder with a plain name right under C:/ (Git Bash: /c/) on Windows, or on a Mac right under /Users/Shared/ (one folder per app).
+    It is outside the home folder on purpose, so that is not warned. The path must be plain ASCII with no space."""
     odd_home = bool(re.search(r"\s", h)) or any(ord(ch) > 127 for ch in h)
     return odd_home and bool(SAFE_ALT_PLACE.match(p))
 

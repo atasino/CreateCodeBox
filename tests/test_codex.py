@@ -417,8 +417,8 @@ def test_generated():
     check("generate: hooks.json has no absolute path and no CLAUDE_PROJECT_DIR", "CLAUDE_PROJECT_DIR" not in files[".codex/hooks.json"] and "/Users/" not in files[".codex/hooks.json"])
     b = files["BOOTSTRAP.codex.md"]
     check("generate: BOOTSTRAP.codex.md starts Codex (`codex`) and asks the user to trust the hooks", "`codex`" in b and "/hooks" in b and "Claude" not in b, [w for w in ("Claude",) if w in b])
-    check("generate: BOOTSTRAP.codex.md keeps the four allowed commands and the fixed folder for odd home paths",
-          "`git clone <address> <folder>`" in b and "C:\\CreateCodeBox" in b and "/Users/Shared/CreateCodeBox" in b)
+    check("generate: BOOTSTRAP.codex.md keeps the allowed commands and the place for odd home paths",
+          "`git clone <address> <folder>`" in b and "`mkdir <folder>`" in b and "/Users/Shared" in b and "C:\\" in b)
     # a stale overlay is a failure, not a silent skip
     try:
         gen_codex.replace_all("abc", [["zzz", "y"]], "test")
