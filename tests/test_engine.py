@@ -533,7 +533,7 @@ def test_hooks_g1():
         check("A2: サブコマンド単位の許可がそろう（+ Edit/Write(projects/**)）", all(("Bash(bash ws/bin/ws.sh %s:*)" % n in allow and "Bash(bash ws/bin/ws.sh %s)" % n in allow) for n in need)
               and "Edit(projects/**)" in allow and "Write(projects/**)" in allow, allow)
         check(".gitignore に .ws/ と .env 系が入っている", ".ws/" in open(os.path.join(e.root, ".gitignore")).read().split() and ".env.*" in open(os.path.join(e.root, ".gitignore")).read())
-        check("ws/VERSION は 0.4.1", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.1")
+        check("ws/VERSION は 0.4.2", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.2")
         check("ws.sh: python が無いと日英の案内で exit 1", subprocess.run(["/bin/sh", os.path.join(e.root, "ws", "bin", "ws.sh"), "version"], capture_output=True, env={"PATH": empty, "HOME": e.home}).returncode == 1)
     finally:
         e.close()
@@ -961,6 +961,35 @@ def test_place():
         e.env["CREATECODEBOX_LANG"] = "ja"
         out = e.run(["doctor"])[1]
         check("8-B: ja の place の文（place: warn の印は同じ・理由と移し方は ja）", "place: warn " in out and "ホームフォルダの外" in out and "~/CreateCodeBox に移して" in out, out)
+    finally:
+        e.close()
+
+
+def test_read_only_options():
+    """Commands that are let through as read-only before approval must not write or run anything (review of v0.4.0)."""
+    e = Env()
+    try:
+        slug = new_in_r2(e, goal_type="(blank)")
+        check("(前提) R1", e.stage() == "R1")
+        src = "projects/%s/src" % slug
+        deny = ["find projects -fprintf %s/a.txt %%p" % src, "find . -fprint0 %s/a" % src, "find . -fprint %s/a" % src, "find . -fls %s/a" % src,
+                "find . -delete", "find . -exec touch {} +", "find . -execdir touch x", "find . -ok rm", "find . -okdir rm",
+                "find -O3 . -name a", "find . -name a -fprintf x y", "find . -newerXX x",
+                "tree -o %s/a.txt" % src, "tree -R -H . -L 1", "tree -aR", "tree -Lo 1 x", "tree --output=x",
+                "rg --pre cat x", "rg --pre=cat x", "rg --hostname-bin=/bin/sh x", "rg --hostname-bin /bin/sh x",
+                "find . \"-fprintf\" a x", "find . '-delete'", "find . \\-delete", "find . -\"exec\" touch {} +", "tree \"-o\" x", "tree '-R'",
+                "rg \"--pre\" cat x", "git diff \"--output=x\"", "date \"-s\" 2020-01-01",
+                "find . {-delete,}", "rg {--pre,cat} x", "tree {-o,x}", "git diff {--output=x,}", "find . *delete", "find . -name *.md", "git diff --out=x", "rg \"--pre\"* x", "find . -name x\"*\"",
+                "find . =(touch x)", "echo *(e:'touch x':)", "cat =(date)", "find . .(e:'touch x':)", "cd =(touch) && ls",
+                "bash ws/bin/ws.sh status =(touch x)", "echo a#(touch x)", "echo d/a#b*(e:'touch x':)", "bash ws/bin/ws.sh status d/a#*(e:'touch x':)"]
+        passed = [c for c in deny if e.pre("Bash", command=c) is None]
+        check("読取り扱いの find・tree・rg でも、書く・動かすオプションは承認前に止まる（%d 例）" % len(deny), not passed, passed)
+        ok = ["find . -name PROJECT.md", "find projects -maxdepth 2 -type f -name \"*.md\"", "find . -newermt 2026-01-01 -print",
+              "find . ! -name a -print0", "find . -size +1k -ls", "find . -printf %p", "tree -L 2", "tree -a -d", "rg -n what projects", "rg --files",
+              "find . -name \"*.md\"", "rg -n \"to do\" projects", "date \"+%F\""]
+        bad = [c for c in ok if e.pre("Bash", command=c) is not None]
+        check("読むだけの find・tree・rg は今までどおり通る（%d 例）" % len(ok), not bad, bad)
+        check("ws.sh の引数の引用符の中の ( ) は今までどおり通る（zsh でもただの文字）", e.pre("Bash", command="bash ws/bin/ws.sh task add \"Fix login (urgent)\"") is None)
     finally:
         e.close()
 
@@ -2760,7 +2789,7 @@ def main():
 
     for fn in (test_scan, test_gate_keys_and_protect, test_records_signature, test_st_extra, test_done_and_append, test_hooks_g1, test_lang,
                test_approval_phrases, test_two_step_approval, test_start_check, test_publish_phrase, test_c3_parse, test_v02_fixture, test_stage_misc, test_stop, test_safety_commands,
-               test_new_entrance_and_render, test_harden_lists, test_references, test_place, test_compound_and_project_write, test_session_resume, test_translation,
+               test_new_entrance_and_render, test_harden_lists, test_references, test_place, test_read_only_options, test_compound_and_project_write, test_session_resume, test_translation,
                test_tasks_triage, test_tasks_commands, test_schedule_dates, test_gantt_text, test_open_block_on_choice, test_tasks_digest_and_page, test_tasks_lang, test_commit_email_privacy):
         try:
             fn()

@@ -13,6 +13,7 @@ import hmac
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -57,6 +58,34 @@ GAKASO_READ = re.compile(r"(get|list|read|search|view|find|status|whoami|describ
 READONLY_CMDS = {"ls", "cat", "pwd", "head", "tail", "wc", "grep", "rg", "date", "echo", "tree", "stat", "du", "which"}
 READONLY_GIT = {"status", "log", "diff", "show"}
 SHELL_META = re.compile(r"[><;&|`$\n\r]")
+# find: only these options may appear (tests, operators, and actions that print to the screen). Anything else that
+# starts with "-" is refused, so a write or a run (-fprintf, -fprint0, -fls, -exec, -delete …) never passes.
+FIND_OK = {
+    "-name", "-iname", "-path", "-ipath", "-wholename", "-iwholename", "-regex", "-iregex", "-regextype",
+    "-lname", "-ilname", "-type", "-xtype", "-size", "-empty", "-perm", "-user", "-group", "-uid", "-gid",
+    "-nouser", "-nogroup", "-links", "-inum", "-samefile", "-readable", "-writable", "-executable",
+    "-mtime", "-mmin", "-atime", "-amin", "-ctime", "-cmin", "-newer", "-anewer", "-cnewer", "-used",
+    "-maxdepth", "-mindepth", "-depth", "-xdev", "-mount", "-follow", "-noleaf", "-daystart",
+    "-prune", "-quit", "-true", "-false", "-not", "-and", "-or", "-a", "-o",
+    "-print", "-print0", "-printf", "-ls", "-H", "-L", "-P",
+}
+FIND_NEWER = re.compile(r"^-newer[aBcmt][aBcmt]$")
+
+
+def shell_meta(cmd):
+    """Shell symbols that can run or redirect something: SHELL_META, and a ( or ) outside quotes.
+    zsh (the shell on a Mac) runs a command in =(cmd) and in glob qualifiers such as *(e:cmd:). Inside quotes they are plain text."""
+    if SHELL_META.search(cmd):
+        return True
+    if "(" not in cmd and ")" not in cmd:
+        return False
+    try:
+        lx = shlex.shlex(cmd, posix=True, punctuation_chars="()")
+        lx.whitespace_split = True
+        lx.commenters = ""  # zsh does not start a comment in the middle of a word (a#(cmd))
+        return any(t and set(t) <= set("()") for t in lx)
+    except ValueError:  # unbalanced quotes: refuse
+        return True
 
 # ---------- secret scanning ----------
 SPECIFIC_PATTERNS = [
@@ -995,23 +1024,33 @@ def write_zone(root, stage, slug, target):
 
 def readonly_command(cmd):
     cmd = cmd.strip()
-    if not cmd or SHELL_META.search(cmd):
+    if not cmd or shell_meta(cmd):
         return False
-    words = cmd.split()
+    # The shell removes quotes and backslashes, so "-fprintf" or \-delete is the option itself. Check what the shell will see.
+    raw = cmd.split()
+    words = [re.sub(r"[\"'\\\\]", "", w) for w in raw]
     head = words[0]
+    if head in ("find", "tree", "rg", "git"):
+        # The shell also makes words: {-delete,} becomes -delete, and an unquoted *delete can match a file named -delete.
+        # These commands have options that write or run, so refuse { } and unquoted * ? [ (a quoted pattern such as "*.md" is fine).
+        whole = lambda w: len(w) >= 2 and w[0] in "\"'" and w[-1] == w[0] and w[0] not in w[1:-1]
+        if "{" in cmd or any(re.search(r"[*?\[]", w) and not whole(w) for w in raw):
+            return False
     if head == "git":
         if len(words) < 2:
             return False
         sub, rest = words[1], words[2:]
-        if any(w.startswith("--output") for w in rest):
+        if any(w.startswith("--ou") for w in rest):  # --output, also shortened (--out=…)
             return False
         return sub in READONLY_GIT
     if head == "find":
-        return not any(w in ("-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint", "-fls") for w in words)
+        return all(w in FIND_OK or FIND_NEWER.match(w) for w in words[1:] if w.startswith("-"))
     if head == "rg":
-        return not any(w == "--pre" or w.startswith("--pre=") for w in words)
+        # --pre and --hostname-bin run another program.
+        return not any(w in ("--pre", "--hostname-bin") or w.startswith(("--pre=", "--hostname-bin=")) for w in words)
     if head == "tree":
-        return not any(w == "-o" for w in words)
+        # -o writes the listing to a file, and -R writes 00Tree.html into each folder. Short options can be joined (-aR).
+        return not any(w.startswith("--o") or (w.startswith("-") and not w.startswith("--") and ("o" in w[1:] or "R" in w[1:])) for w in words[1:])
     if head == "date":
         return all(w.startswith("+") for w in words[1:])
     return head in READONLY_CMDS
@@ -1032,7 +1071,7 @@ def readonly_compound(root, cmd, cwd):
         return os.path.realpath(os.path.expanduser(path) if path.startswith("~") else (path if os.path.isabs(path) else os.path.join(cur, path)))
     cur, steps = cwd, []
     for part in parts:
-        if SHELL_META.search(part):
+        if shell_meta(part):
             return None
         m = re.match(r"^cd\s+(\S+)$", part)
         if m:
@@ -1409,7 +1448,7 @@ def gate(root, event):
         return check_edit_path(root, stage, slug, cwd, p, where, tool=tool) or triage
     if tool == "Bash":
         cmd = (ti.get("command") or "").strip()
-        if WS_CMD.match(cmd) and SHELL_META.search(cmd):
+        if WS_CMD.match(cmd) and shell_meta(cmd):
             return T("deny.meta") + " " + T("deny.meta_hint")
         if WS_CMD.match(cmd):
             if triage and not triage_ws_ok(cmd):
@@ -1421,7 +1460,7 @@ def gate(root, event):
                     return T("deny.with_secrets_inner")
             return None
         m = MCP_CMD.match(cmd)
-        if m and not SHELL_META.search(cmd):
+        if m and not shell_meta(cmd):
             if m.group(1) in ("list", "get"):
                 return None
             toks = cmd.split()
@@ -1446,7 +1485,7 @@ def gate(root, event):
             if is_first_turn(root):
                 return T("deny.first_turn")
             return triage  # a command that is not read-only waits until the message is sorted onto the board
-        return T("deny.stage_cmd", where=where) + ((" " + T("deny.meta_hint")) if SHELL_META.search(cmd) else "")
+        return T("deny.stage_cmd", where=where) + ((" " + T("deny.meta_hint")) if shell_meta(cmd) else "")
     if tool.startswith("mcp__"):
         # an MCP server the user added: a tool whose own name (not the server name) says it writes waits
         # for the build stage, as src/ does; after that the user decides what the server may do (docs/security.md)

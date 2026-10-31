@@ -24,10 +24,10 @@ To start, follow the six steps below.
 3. **Paste this one sentence** into Claude Code, and press Enter. (Mac: Command + V. Windows: Shift + Insert, or right-click.)
 
 ```
-Set up CreateCodeBox from https://github.com/atasino/CreateCodeBox. First read the whole BOOTSTRAP.md of that repository with curl from raw.githubusercontent.com (a web summary is not enough), then follow it.
+Set up CreateCodeBox from https://github.com/atasino/CreateCodeBox. First read the whole file https://raw.githubusercontent.com/atasino/CreateCodeBox/main/BOOTSTRAP.md with curl (a web summary is not enough), then follow it.
 ```
 
-   This is the address of this repository. If you use a copy of it, replace the address with the top page of that copy. Copy it from the address bar of your browser, not from another page.
+   Paste the sentence as it is. The two addresses in it belong to this repository (the place on GitHub that holds this code). Only if you use a copy of it on GitHub (a fork), replace `atasino/CreateCodeBox` with the owner and name of that copy in both addresses, and also in the `curl` command and the `git clone` line below. To find the owner and name, open the page of that copy in your browser and copy them from the address bar. Do not use the address of another page.
 
    The sentence asks Claude to get the setup steps (`BOOTSTRAP.md`) with `curl`, a small tool that gets a file from a web address. Before it does, Claude Code may ask your permission to run `curl`. That is expected. The command on that screen should look like this:
 

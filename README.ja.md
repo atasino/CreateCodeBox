@@ -26,10 +26,10 @@ CreateCodeBox は、アプリのコード（`src/`）を、あなたが承認す
 3. **次の 1 文を、Claude Code に貼り付けます。** 貼り付けたら、Enter キーを押します。貼り付けは、Mac では command + V、Windows では Shift + Insert か右クリックです。
 
 ```
-Set up CreateCodeBox from https://github.com/atasino/CreateCodeBox. First read the whole BOOTSTRAP.md of that repository with curl from raw.githubusercontent.com (a web summary is not enough), then follow it.
+Set up CreateCodeBox from https://github.com/atasino/CreateCodeBox. First read the whole file https://raw.githubusercontent.com/atasino/CreateCodeBox/main/BOOTSTRAP.md with curl (a web summary is not enough), then follow it.
 ```
 
-   文の中のアドレスは、このリポジトリのものです。ほかのコピー（GitHub 上の別のコードの置き場）を使うときは、そのトップページのアドレスに置き換えてください。アドレスはブラウザのアドレス欄からコピーします。ほかのページのアドレスは使わないでください。
+   英文は、そのまま貼り付けます。上の英文にある 2 つのアドレスは、このリポジトリ（GitHub 上にあるコードの置き場）のものです。このリポジトリをコピーしたものを使うときだけ、2 つのアドレスにある `atasino/CreateCodeBox` を、そのコピーの持ち主と名前に置き換えてください。下の `curl` と `git clone` のコマンドも、同じように置き換えてください。持ち主と名前は、そのコピーのページをブラウザで開き、アドレス欄から写してください。ほかのページのアドレスは使わないでください。
 
    この 1 文は、設定の手順（`BOOTSTRAP.md`）を `curl` で取ってくるよう、Claude Code に求めます。`curl` は、Web のアドレスからファイルを取ってくる小さな道具です。取ってくる前に、Claude Code が `curl` を使う許可を求めてくることがあります。これは想定どおりです。許可を求める画面に出るコマンドは、次の形のはずです。
 
