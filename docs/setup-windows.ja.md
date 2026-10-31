@@ -37,27 +37,44 @@ Anthropic の公式の案内（https://code.claude.com/docs/en/overview）に従
 claude --version
 ```
 
-## 5. CreateCodeBox を用意して始める
+## 5. アプリ用のフォルダを作って始める
 
-README に、1 文で始める方法があります。Claude Code に 1 文を貼り付けると、Claude が CreateCodeBox を用意します。この方法は、まだ実際のパソコンで試したことがありません。
+CreateCodeBox は、アプリ 1 つにつき、フォルダを 1 つ使います。空のフォルダを作り、そこで Claude Code を開いて、1 文を貼り付けます（[README](../README.ja.md) の手順 3）。Claude は、そのフォルダに CreateCodeBox を用意するよう指示してあります。この方法は、Mac で、Claude Code が許可を求めない設定にした試験でしか試していません。Windows では、まだ試していません。
 
-**1 文でうまくいかないとき: 自分の手で用意します。** 先に、`/exit` と打って Claude Code を終了するか、2 つ目の Git Bash のウィンドウを開きます。そのあと、Git Bash に、次の 3 行を 1 行ずつ貼り付けます。1 行ごとに Enter キーを押します。
+先に、次の 3 行で、フォルダを作って Claude Code を開きます。Git Bash に 1 行ずつ打ち、1 行ごとに Enter キーを押します。
 
 ```
-git clone https://github.com/atasino/CreateCodeBox.git ~/CreateCodeBox
-cd ~/CreateCodeBox
+mkdir ~/coffee-log
+cd ~/coffee-log
 claude
 ```
 
-1 行目のアドレスは、このリポジトリのものです。別の人が用意した CreateCodeBox（GitHub 上のコードの置き場）を使うときは、1 行目の `https://` から `.git` までを、そのアドレスに置き換えてください。アドレスは、GitHub のページの緑の **Code** ボタンからコピーできます。ボタンを押して、コピーのアイコンを押します。1 行目は、CreateCodeBox をダウンロードして、ホームフォルダ（あなたのユーザー名のフォルダ。Windows ではユーザーフォルダ）の中の `CreateCodeBox` というフォルダに置きます。Git Bash では、`~` がそのユーザーフォルダを指します。2 行目で、そのフォルダに入ります。3 行目で、Claude Code を起動します。
+1 行目は、ホームフォルダ（あなたのユーザー名のフォルダ。Windows ではユーザーフォルダ）の中に、`coffee-log` という空のフォルダを作ります。Git Bash では、`~` が Windows のユーザーフォルダを指します。名前は、あなたのアプリの名前に変えてください。使えるのは、英字・数字・`-` だけで、空白は入れません。2 行目で、そのフォルダに入ります。3 行目で、Claude Code を起動します。Windows のユーザー名に空白や英語以外の文字が入っているときは、下の「フォルダを置く場所」を見てください。Visual Studio Code や Claude のアプリを使うときは、[README](../README.ja.md) の手順 2 を見てください。
 
-初回は、Claude Code が、このフォルダを信頼してよいかを聞いてきます。貼り付けたアドレスから作ったフォルダで、そのアドレスを信頼できるなら、yes と答えます。
+Claude Code が、このフォルダを信頼してよいかを聞いてくることがあります。今作ったばかりの空のフォルダなので、yes と答えます。
 
-この 3 行のあとは、Claude Code が `CreateCodeBox` のフォルダで動いています。このウィンドウをそのまま使います。[README](../README.ja.md) の手順 4 は飛ばして、手順 5 に進み、作りたいアプリを Claude に伝えます。
+そのあと、[README](../README.ja.md) の手順 3 の 1 文を、Claude Code に貼り付けます。Claude は、このフォルダに CreateCodeBox を用意するよう指示してあります。そのあとは、README の手順 4 に従います。Claude が、そのフォルダで Claude Code を開き直す方法を教えます。ほかのフォルダで Claude Code をもう開いているときも、そこに 1 文を貼り付けてかまいません。新しいフォルダを作るのを、Claude が手伝います。
+
+**1 文でうまくいかないとき: 自分の手で用意します。** 先に、`/exit` と打って Claude Code を終了するか、2 つ目の Git Bash のウィンドウを開きます。`cd ~/coffee-log`（フォルダの名前は、自分のものに変えます）で、新しく作った空のフォルダに入ります。そのあと、次の 2 行を、Git Bash に 1 行ずつ貼り付けます。1 行ごとに Enter キーを押します。
+
+```
+git clone https://github.com/atasino/CreateCodeBox.git .
+claude
+```
+
+1 行目のアドレスは、このリポジトリのものです。別の人が用意した CreateCodeBox（GitHub 上のコードの置き場）を使うときは、1 行目の `https://` から `.git` までを、そのアドレスに置き換えてください。アドレスは、GitHub のページの緑の **Code** ボタンからコピーできます。ボタンを押して、コピーのアイコンを押します。1 行目は、今いるフォルダに、CreateCodeBox をダウンロードして置きます。最後の `.` は「今いるフォルダに置く」という意味で、置き先のフォルダは空でなければなりません。2 行目で、Claude Code を起動します。
+
+`git clone` が、フォルダが空でないと表示したときは、別の新しい空のフォルダを作り、そこで同じ 2 行を打ってください。
+
+Claude Code が、このフォルダを信頼してよいかを聞いてきたら、質問を読んでください。使ったアドレスから作ったフォルダで、そのアドレスを信頼できるなら、yes と答えます。
+
+この 2 行のあとは、Claude Code が、あなたのアプリ用のフォルダで動いています。このウィンドウをそのまま使います。[README](../README.ja.md) の手順 4 は飛ばして、手順 5 に進み、作りたいアプリを Claude に伝えます。
 
 ## フォルダを置く場所
 
-**おすすめ:** ホームフォルダの直下の、`CreateCodeBox` というフォルダ: `%USERPROFILE%\CreateCodeBox`（Git Bash では `~/CreateCodeBox`）。README の 1 文で始める方法も、この場所を使います。
+**おすすめ:** アプリごとに、新しい空のフォルダを 1 つ、ホームフォルダの直下に作ります。名前は、英字・数字・`-` だけで、空白は入れません。たとえば `%USERPROFILE%\coffee-log`（Git Bash では `~/coffee-log`）です。このページで「アプリ用のフォルダ」と言うときは、このフォルダのことです。
+
+**Windows のユーザー名に空白や、英語以外の文字が入っているとき**（たとえば `C:\Users\山田`）: フォルダを、ホームフォルダの中に置かないでください。代わりに、`C:\` のすぐ下に置きます。たとえば `C:\coffee-log`（Git Bash では `/c/coffee-log`）です。このパスには、英字だけが入っていて、空白はありません。ワークスペースは、ホームフォルダの外にあるフォルダのほとんどについて警告します。この場所については、警告しません。
 
 **避ける場所:**
 
@@ -74,7 +91,7 @@ claude
 - Claude が「別のターミナルを開いてください」と言ったら、2 つ目の Git Bash のウィンドウを開きます。
 - 強化モード（hardened mode）は、Claude が実行するコマンドに、鍵のファイルを読ませないようにする、任意の設定です。OS の仕組みで止めます。Windows では、まだ使えません。
 - ワークスペースから Python 3.8 以上が必要だと表示されたときは、手順 2 と、手順 3 の `python` の行を確かめます。
-- うまくいかないときは、`cd ~/CreateCodeBox` でそのフォルダに入り、そこで `bash ws/bin/ws.sh doctor` を打ちます。
+- うまくいかないときは、アプリ用のフォルダに入り（たとえば `cd ~/coffee-log`）、そこで `bash ws/bin/ws.sh doctor` を打ちます。
 - 手順がうまくいかないのは、あなたの間違いとは限りません。この手順に不備があるのかもしれません。[A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) のフォームに、画面に出た表示を書いてください。質問は [Discussions](https://github.com/atasino/CreateCodeBox/discussions) に書いてください。
 
 ## よくあるつまずき
@@ -86,11 +103,11 @@ claude
 | `claude: command not found`（Git Bash では `bash: claude: command not found`） | Claude Code が入っていないか、入れる前に開いた Git Bash のウィンドウを使っているようです。 | Git Bash を閉じて、新しいウィンドウを開き、`claude --version` と打ちます。それでも出るなら、手順 4 をやり直します。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
 | `git: command not found` | Git for Windows が入っていないか、Git Bash の外で打っているようです。 | スタートメニューから Git Bash を開きます。Git Bash が無いときは、手順 1 をやり直します。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
 | `CreateCodeBox は Python 3.8 以上が必要です。python.org から入れて、ターミナルを開き直してください。` と出ます。英語の 1 行も並んで出ます。`Python was not found` と出ることもあります。 | Python 3.8 以上が入っていないようです。 | 手順 2 をやり直し、「Add python.exe to PATH」にチェックを入れます。新しい Git Bash のウィンドウを開いて、`python --version` と打ちます。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| `bash: ws/bin/ws.sh: No such file or directory` | `CreateCodeBox` のフォルダの中にいないようです。 | `cd ~/CreateCodeBox` と打ってから、もう一度同じコマンドを打ちます。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| 「Do you trust the files in this folder?」で No と答えた。表示は版によって違うことがあります。 | 信頼しないと、Claude Code は、ワークスペースの自動チェックを動かさないことがあります。私たちは、ワークスペースの許可の一覧が無視されるのを見ました。 | `CreateCodeBox` のフォルダで、もう一度 `claude` と打ち、yes と答えます。yes と答えるのは、この手順で用意したフォルダのときだけです。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| `[CreateCodeBox` で始まる行が無い、またはワークスペースの自動チェック（hook）が動いていないと Claude が言う | ワークスペースの自動チェックが始まっていないようです。考えられる原因は 3 つのどれかです。信頼の質問に No と答えた、Python が無い、別のフォルダで `claude` を起動した、のいずれかです。 | `/exit` と打ち、`cd ~/CreateCodeBox` と `claude` を打ちます。また出るなら、`bash ws/bin/ws.sh doctor` を打ち、`NG` の付いた行を読みます。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| `place: warn` と、そのあとに理由 | フォルダが、問題の起きやすい場所にあります。これは警告で、止まりはしません。 | フォルダを `%USERPROFILE%\CreateCodeBox` に移します。エクスプローラーで、ユーザーフォルダにドラッグして、名前を変えます。そのあと、そこで `claude` を起動します。そのまま進めてもかまいません。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| `bash: ws/bin/ws.sh: No such file or directory` | アプリ用のフォルダの中にいないようです。 | `cd ~/coffee-log`（フォルダの名前は自分のものに変えます）と打ってから、もう一度同じコマンドを打ちます。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| 「Do you trust the files in this folder?」で No と答えた。表示は版によって違うことがあります。 | 信頼しないと、Claude Code は、ワークスペースの自動チェックを動かさないことがあります。私たちは、ワークスペースの許可の一覧が無視されるのを見ました。 | アプリ用のフォルダで、もう一度 `claude` と打ち、yes と答えます。yes と答えるのは、この手順で用意したフォルダのときだけです。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| `[CreateCodeBox` で始まる行が無い、またはワークスペースの自動チェック（hook）が動いていないと Claude が言う | ワークスペースの自動チェックが始まっていないようです。考えられる原因は 3 つのどれかです。信頼の質問に No と答えた、Python が無い、別のフォルダで `claude` を起動した、のいずれかです。 | `/exit` と打ち、`cd ~/coffee-log`（フォルダの名前は自分のものに変えます）と `claude` を打ちます。また出るなら、`bash ws/bin/ws.sh doctor` を打ち、`NG` の付いた行を読みます。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| `place: warn` と、そのあとに理由 | フォルダが、問題の起きやすい場所にあります。これは警告で、止まりはしません。 | ユーザーフォルダの中に、アプリ用の新しい空のフォルダを作り（手順 5 を見てください）、そこで CreateCodeBox を用意し直します。これまでに作ったものは、古いフォルダに残ります。そのまま進めてもかまいません。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
 | Claude Code が、何度も許可を求めてくる | Claude Code は、多くの操作の前に聞いてきます。こうなることがあります。 | 質問を 1 つずつ読みます。分かったものにだけ yes と答えます。分からないものは、Claude に意味を聞きます。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| アプリがブラウザで開かない | ファイルが、自動では開かなかったか、テキストエディタで開いたのかもしれません。 | エクスプローラーで、ユーザーフォルダの中の `CreateCodeBox\projects\<名前>\src` を開きます。`index.html` を右クリックして、「プログラムから開く」でブラウザを選びます。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| アプリがブラウザで開かない | ファイルが、自動では開かなかったか、テキストエディタで開いたのかもしれません。 | エクスプローラーで、アプリ用のフォルダの中の `projects\<名前>\src` を開きます。`index.html` を右クリックして、「プログラムから開く」でブラウザを選びます。 | [フォームを開く（A step did not work）](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
 
 `<名前>` は、`projects/` の中にある、あなたのアプリのフォルダの名前です。

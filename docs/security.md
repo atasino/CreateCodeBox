@@ -88,7 +88,8 @@ Then restart Claude Code. It is built for Mac and Linux, and we tested it only o
 
 ## Where the folder lives
 
-- Keep the workspace in a folder directly in your home folder, for example `~/CreateCodeBox`.
+- Keep each app in its own new empty folder directly in your home folder. Name it with English letters, numbers, and `-`, with no spaces, for example `~/coffee-log`. That folder is the workspace.
+- If your user name has a space or a non-English letter, put the folder right under `/Users/Shared/` on a Mac, or right under `C:\` on Windows.
 - Do not keep it in Downloads, Desktop, Documents, or a folder that iCloud, OneDrive, or Dropbox syncs. Sync can copy your work and your key files to the cloud.
 - Do not keep it inside another Git repo, or in a path with spaces or non-English characters.
 - `bash ws/bin/ws.sh doctor` prints `place: ok` or `place: warn` with the reason. It only warns.

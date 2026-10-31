@@ -68,7 +68,7 @@ body:
     id: doctor
     attributes:
       label: Output of `bash ws/bin/ws.sh doctor` (optional)
-      description: Run it in the CreateCodeBox folder, if you can. Check the text for keys and personal information before you paste it.
+      description: Run it in your app's folder, if you can. Check the text for keys and personal information before you paste it.
       render: text
     validations:
       required: false

@@ -35,29 +35,44 @@ Follow Anthropic's official guide: https://code.claude.com/docs/en/overview. The
 claude --version
 ```
 
-## 5. Get CreateCodeBox and start
+## 5. Make a folder for your app and start
 
-The README shows a one-sentence start. You paste one sentence into Claude Code, and Claude copies CreateCodeBox for you. We have not tested that on a real machine yet.
+CreateCodeBox uses one folder for each app. You make an empty folder, open Claude Code in it, and paste one sentence (README, step 3). Claude sets CreateCodeBox up in that folder. We ran this only on a Mac, in test runs with permission prompts turned off. We have not run it on Windows.
 
-**If the one sentence does not work: do it by hand.** Close Claude Code first (type `/exit`), or open a second Git Bash window. Then, in Git Bash, paste these 3 lines one at a time. Press Enter after each line.
+First make the folder and open Claude Code in it. Type these three lines in Git Bash, one at a time. Press Enter after each line.
 
 ```
-git clone https://github.com/atasino/CreateCodeBox.git ~/CreateCodeBox
-cd ~/CreateCodeBox
+mkdir ~/coffee-log
+cd ~/coffee-log
 claude
 ```
 
-Line 1 uses the address of this repository. If you use a copy of it, replace the address in line 1 (from `https://` to `.git`) with the address of that copy. You can copy an address from the green **Code** button on the GitHub page: click the button, then click the copy icon. Line 1 puts the copy in the folder `CreateCodeBox` in your home folder. In Git Bash, `~` is your Windows user folder. Line 2 goes into that folder. Line 3 starts Claude Code.
+Line 1 makes an empty folder named `coffee-log` in your home folder. In Git Bash, `~` is your Windows user folder. Use a name for your app instead: English letters, numbers, and `-`, with no spaces. Line 2 goes into that folder. Line 3 starts Claude Code. If your Windows user name has a space or a non-English letter, see "Where to put the folder" below. To use Visual Studio Code or the Claude app, see step 2 of the [README](../README.md).
 
-The first time, Claude Code asks if you trust this folder. If the folder came from the address you pasted, and you trust that address, answer yes.
+Claude Code may ask if you trust this folder. It is the empty folder you made a moment ago, so answer yes.
 
-After these 3 lines, Claude Code is running in your `CreateCodeBox` folder. Keep using this window. Skip step 4 of the [README](../README.md) and go to step 5: tell Claude what you want to make.
+Then paste the one sentence from step 3 of the [README](../README.md) into Claude Code. Claude is meant to set up CreateCodeBox in this folder. Then follow step 4 of the README: Claude shows you how to open Claude Code again in the folder. If Claude Code was already open in another folder, paste the sentence there anyway. Claude is told to help you make a new folder.
+
+**If the one sentence does not work: do it by hand.** Close Claude Code first (type `/exit`), or open a second Git Bash window. Go into your new empty folder with `cd ~/coffee-log` (use your folder's name). Then paste these 2 lines into Git Bash, one at a time. Press Enter after each line.
+
+```
+git clone https://github.com/atasino/CreateCodeBox.git .
+claude
+```
+
+Line 1 uses the address of this repository. If you use a copy of it, replace the address in line 1 (from `https://` to `.git`) with the address of that copy. You can copy an address from the green **Code** button on the GitHub page: click the button, then click the copy icon. Line 1 copies CreateCodeBox into the folder you are in. The `.` at the end means "this folder", so the folder must be empty. Line 2 starts Claude Code.
+
+If `git clone` says the folder is not empty, make another new empty folder and type the same lines there.
+
+When Claude Code asks if you trust this folder, read the question. If the folder came from the address you used, and you trust that address, answer yes.
+
+After these 2 lines, Claude Code is running in your app's folder. Keep using this window. Skip step 4 of the [README](../README.md) and go to step 5: tell Claude what you want to make.
 
 ## Where to put the folder
 
-**Best:** a folder named `CreateCodeBox` directly in your home folder: `%USERPROFILE%\CreateCodeBox` (in Git Bash: `~/CreateCodeBox`). The one-sentence start in the README uses this place.
+**Best:** one new empty folder for each app, directly in your home folder. Name it with English letters, numbers, and `-`, with no spaces. For example: `%USERPROFILE%\coffee-log` (in Git Bash: `~/coffee-log`). "Your app's folder" on this page means this folder.
 
-**If your Windows user name has a space or a non-English letter** (for example `C:\Users\山田`), do not put CreateCodeBox in your home folder. Use `C:\CreateCodeBox` instead (in Git Bash: `/c/CreateCodeBox`). This path has only English letters and no spaces. The workspace warns about most folders outside your home folder. It does not warn about this one.
+**If your Windows user name has a space or a non-English letter** (for example `C:\Users\山田`), do not put the folder in your home folder. Put it right under `C:\` instead, for example `C:\coffee-log` (in Git Bash: `/c/coffee-log`). This path has only English letters and no spaces. The workspace warns about most folders outside your home folder. It does not warn about this one.
 
 **Avoid these places:**
 
@@ -74,7 +89,7 @@ The workspace checks this. Run `bash ws/bin/ws.sh doctor`. It prints `place: ok`
 - When Claude asks you to "open a separate Terminal", open a second Git Bash window.
 - Hardened mode is not available on Windows yet. It is an optional setting that stops commands Claude runs from reading your key files.
 - If the workspace says that it needs Python 3.8, check step 2 and the `python` line in step 3.
-- If something does not work, go into the folder with `cd ~/CreateCodeBox` and run `bash ws/bin/ws.sh doctor` there.
+- If something does not work, go into your app's folder (for example `cd ~/coffee-log`) and run `bash ws/bin/ws.sh doctor` there.
 - If a step does not work, it may not be your mistake. Something may be missing from the step. Please open the form [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) and tell us what you saw. Ask questions in [Discussions](https://github.com/atasino/CreateCodeBox/discussions).
 
 ## Common problems
@@ -86,11 +101,11 @@ We have seen only some of these lines ourselves. The others are written from gen
 | `claude: command not found` (in Git Bash: `bash: claude: command not found`) | Claude Code may not be installed, or this Git Bash window was opened before you installed it. | Close Git Bash, open a new window, and type `claude --version`. If it still fails, do step 4 again. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
 | `git: command not found` | Git for Windows may not be installed, or you may not be in Git Bash. | Open Git Bash from the Start menu. If there is no Git Bash, do step 1 again. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
 | `CreateCodeBox needs Python 3.8 or newer. Install it from python.org and open a new terminal.` (or `Python was not found`) | Python 3.8 or newer may not be installed. | Do step 2 again and tick "Add python.exe to PATH". Open a new Git Bash window, and type `python --version`. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| `bash: ws/bin/ws.sh: No such file or directory` | You are probably not in the `CreateCodeBox` folder. | Type `cd ~/CreateCodeBox`, then type the command again. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| You answered No to "Do you trust the files in this folder?" (the wording can differ by version) | Without your trust, Claude Code may not run the workspace's checks. We saw it ignore the workspace's permission list. | Type `claude` again in the `CreateCodeBox` folder, and answer yes. Answer yes only for the folder you made. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| Claude says there is no line that starts with `[CreateCodeBox`, or that the hooks are not working | The workspace's checks did not start. Possible causes: you answered No to the trust question, Python is missing, or `claude` was started in another folder. | Type `/exit`, then `cd ~/CreateCodeBox` and `claude`. If it happens again, type `bash ws/bin/ws.sh doctor` and read the lines marked `NG`. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| `place: warn` followed by a reason | The folder is in a place that may cause trouble. This is only a warning. | Move the folder to `%USERPROFILE%\CreateCodeBox` (in File Explorer, drag it into your user folder and rename it), then start `claude` there. Or go on as it is. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| `bash: ws/bin/ws.sh: No such file or directory` | You are probably not in your app's folder. | Type `cd ~/coffee-log` (use your folder's name), then type the command again. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| You answered No to "Do you trust the files in this folder?" (the wording can differ by version) | Without your trust, Claude Code may not run the workspace's checks. We saw it ignore the workspace's permission list. | Type `claude` again in your app's folder, and answer yes. Answer yes only for the folder you made. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| Claude says there is no line that starts with `[CreateCodeBox`, or that the hooks are not working | The workspace's checks did not start. Possible causes: you answered No to the trust question, Python is missing, or `claude` was started in another folder. | Type `/exit`, then `cd ~/coffee-log` (use your folder's name) and `claude`. If it happens again, type `bash ws/bin/ws.sh doctor` and read the lines marked `NG`. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| `place: warn` followed by a reason | The folder is in a place that may cause trouble. This is only a warning. | Make a new empty folder for your app in your user folder (see step 5), and set CreateCodeBox up there. Your earlier work stays in the old folder. Or go on as it is. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
 | Claude Code asks for permission again and again | Claude Code asks before many actions. This can happen. | Read each question. Answer yes only if you understand it. If you do not, ask Claude what it means. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
-| The app does not open in the browser | The file may not have opened by itself, or it opened in a text editor. | In File Explorer, open your user folder, then `CreateCodeBox\projects\<name>\src`. Right-click `index.html`, choose "Open with", and choose your browser. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
+| The app does not open in the browser | The file may not have opened by itself, or it opened in a text editor. | In File Explorer, open your app's folder, then `projects\<name>\src`. Right-click `index.html`, choose "Open with", and choose your browser. | [A step did not work](https://github.com/atasino/CreateCodeBox/issues/new/choose) |
 
 `<name>` is the name of your project's folder inside `projects/`.

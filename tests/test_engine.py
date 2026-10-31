@@ -534,7 +534,7 @@ def test_hooks_g1():
         check("A2: サブコマンド単位の許可がそろう（+ Edit/Write(projects/**)）", all(("Bash(bash ws/bin/ws.sh %s:*)" % n in allow and "Bash(bash ws/bin/ws.sh %s)" % n in allow) for n in need)
               and "Edit(projects/**)" in allow and "Write(projects/**)" in allow, allow)
         check(".gitignore に .ws/ と .env 系が入っている", ".ws/" in open(os.path.join(e.root, ".gitignore")).read().split() and ".env.*" in open(os.path.join(e.root, ".gitignore")).read())
-        check("ws/VERSION は 0.4.4", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.4")
+        check("ws/VERSION は 0.4.5", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.5")
         check("ws.sh: python が無いと日英の案内で exit 1", subprocess.run(["/bin/sh", os.path.join(e.root, "ws", "bin", "ws.sh"), "version"], capture_output=True, env={"PATH": empty, "HOME": e.home}).returncode == 1)
     finally:
         e.close()

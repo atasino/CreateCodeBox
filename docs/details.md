@@ -80,9 +80,9 @@ These tests feed input straight to the guards, or run pieces of the engine. They
 
 - How long the first picture takes. We have not measured it.
 - The reference question, and the prototype built from a reference. They were not run in a real session.
-- The one-sentence start (`BOOTSTRAP.md`): we have not tested it on a real machine. A plain Claude Code may not read it, or may not follow it.
+- The one-sentence start (README step 3, `BOOTSTRAP.md`): we ran it on a Mac only, in test runs with permission prompts turned off. We have not run it in a normal session, or on Windows. A plain Claude Code may not read it, or may not follow it.
 - The place check (`doctor`) only warns. It does not stop you from using a bad place.
-- Normal use: starting `claude` with the 3 lines in the README and working with it in a real conversation.
+- Normal use: starting `claude` in your app's folder, as the README shows, and working with it in a real conversation.
 - Windows (Git Bash and native), Linux, and machines with no Python 3.
 - The hook launcher `hook.sh` on Windows, in Git Bash and in PowerShell.
 - Claude answering in the user's language. It was not run in a real session.
