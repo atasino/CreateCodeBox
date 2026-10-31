@@ -53,7 +53,9 @@ The first time, the user opens a separate Terminal and runs the one line (`cd â€
 
 ## Update CreateCodeBox itself
 
-Only when the user asks. First run `bash ws/bin/ws.sh version` and `git status`. If they changed files in `ws/`, `.claude/`, or `CLAUDE.md`, show the changes first. Ask if updating is OK, then run `bash ws/bin/ws.sh update`. It refuses if there are changes. Do not force it. After the update, run `version` and `doctor`, and tell the user to open Claude Code again. `projects/` and `.ws/` are not part of the update.
+Once a day the workspace checks whether a new version is out, and the hook tells you when one is. Then tell the user in one short line, with the link it gives. Say it once per notice. The user can turn the daily check off or on (`bash ws/bin/ws.sh update-check off` or `on`). `bash ws/bin/ws.sh update-check now` checks at once, and `update-check` alone shows the last result.
+
+Update only when the user asks. First run `bash ws/bin/ws.sh version` and `git status`. If the user changed files in `ws/`, `.claude/`, or `CLAUDE.md`, show the changes first. Ask if updating is OK, then run `bash ws/bin/ws.sh update`. It refuses if there are changes. Do not force it. After the update, run `version` and `doctor`, and tell the user to open Claude Code again. If the update says the Codex hooks changed, tell the user to type `/hooks` in Codex and check that the CreateCodeBox hooks are trusted. `projects/` and `.ws/` are not part of the update.
 
 ## Not checked yet
 

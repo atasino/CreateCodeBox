@@ -279,6 +279,18 @@ MESSAGES = {
     "update.no_git": "このフォルダは git で取得した物ではないので、自動では更新できません。README の手順で入れ直してください。",
     "update.dirty": "このワークスペースの仕組みのファイルが変更されています。更新の前に、変更を確かめてください:\n{dirty}",
     "update.version": "バージョン: {v}",
+    "update.note": "CreateCodeBox の {latest} が出ています（このコピーは {current}）。利用者に短い 1 行で伝え、何が変わったかを書いたページ {page} を添えてください。利用者が頼まない限り更新しないでください。頼まれたら ws-github（Update CreateCodeBox itself）に従ってください。",
+    "update.check_on": "新しい版の毎日の確認を、オンにしました。",
+    "update.check_off": "新しい版の毎日の確認を、オフにしました。オンに戻すには: bash ws/bin/ws.sh update-check on",
+    "update.check_is_off": "（毎日の確認はオフです。）",
+    "update.check_newer": "新しい版が出ています: {latest}（このコピーは {current}）。何が変わったか: {page}。更新するときは、Claude に「CreateCodeBox を更新して」と伝えてください。",
+    "update.check_same": "このコピーは最新の版です（{current}）。",
+    "update.check_unknown": "前回の確認では、版を確かめられませんでした（オフラインだった、アドレスに版の名前が無かったなど）。次の日にもう一度確かめます。",
+    "update.check_never": "まだ確認していません。1 日 1 回、会話の始まりか、作業の途中で確かめます。",
+    "update.check_nosource": "確認できません。このコピーには、問い合わせ先の Web のアドレス（https）がありません（git clone で入手していないときなど）。",
+    "update.codex_hooks": "Codex を使っているとき: この更新でフックが変わりました。Codex で /hooks と打ち、CreateCodeBox のフックが信頼されているかを確かめてください。",
+    "update.timeout": "更新に時間がかかりすぎたので、止めました。ファイルは変わっていないはずです。気になるときは、Claude に git status を見てもらってください。あとでもう一度試してください。",
+    "update.reopen": "新しい版を使うために、Claude Code（または Codex）を閉じて、開き直してください。",
     "version.unknown": "不明",
     "usage": (
         "使い方: ws.sh status | list | select <名前> --quote <利用者の言葉> | new <名前> --name <表示名> --quote <利用者の言葉> | "
@@ -287,7 +299,7 @@ MESSAGES = {
         "st run <ID...> [--timeout N] | st route <ID> user|ai --reason <理由> | harden on|off|status [--with-denywrite] | learn [名前] | "
         "repo init|link <URL>|adopt <URL>|email <アドレス> | save <メモ> | backup | publish-check | publish | intake <ファイル> | rules import <パス> | "
         "secret open|check|path|guide <NAME>|set <NAME>|allow <指紋> [--project] | with-secrets [--project] [--timeout N] -- <コマンド> | "
-        "excludes add <絶対パス> | resign | doctor | version | update | task add|set|date|none ... | tasks [<slug>] | tasks gantt [--text]"),
+        "excludes add <絶対パス> | resign | doctor | version | update | update-check [now|on|off] | task add|set|date|none ... | tasks [<slug>] | tasks gantt [--text]"),
     # ---- タスク表（プロジェクトごとの、残りの仕事） ----
     "zone.board": "全プロジェクトの予定ページ（{rel}）は、ws.sh（`bash ws/bin/ws.sh tasks gantt`）だけが書きます。いつも本当の状態を映すためです",
     "task.usage": (

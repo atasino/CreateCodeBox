@@ -984,6 +984,131 @@ def version(root):
     return (read_text(os.path.join(root, VERSION_FILE)) or T("version.unknown")).strip()
 
 
+# ---------- a new version (checked at most once a day) ----------
+UPDATE_REC = "update_check.json"
+UPDATE_TAG = re.compile(r"^refs/tags/v(\d{1,4})\.(\d{1,4})\.(\d{1,4})$")
+
+
+def update_every():
+    v = os.environ.get("CREATECODEBOX_UPDATE_EVERY", "")
+    return int(v) if v.isdigit() else 24 * 3600
+
+
+def vtuple(s):
+    m = re.fullmatch(r"v?(\d{1,4})\.(\d{1,4})\.(\d{1,4})", (s or "").strip())
+    return tuple(int(x) for x in m.groups()) if m else None
+
+
+def update_source(root):
+    """Where a new version would come from: this copy's own origin, if it is an https address (a copy of a copy checks
+    its own origin, the place `update` pulls from). CREATECODEBOX_UPDATE_URL overrides it. None: no check."""
+    url = os.environ.get("CREATECODEBOX_UPDATE_URL", "").strip()
+    if url:
+        return None if url.startswith("-") else url
+    if not os.path.isdir(os.path.join(root, ".git")):
+        return None
+    try:
+        r = git_run(root, ["remote", "get-url", "origin"], timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    u = r.stdout.strip()
+    return u if r.returncode == 0 and re.fullmatch(r"https://[A-Za-z0-9.-]+(/[\w.-]+){2}/?", u) else None
+
+
+def update_page(url, latest):
+    """The page that says what changed, for a GitHub address. Built here, never taken from what the server sent."""
+    m = re.fullmatch(r"https://github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?/?", url or "")
+    return "https://github.com/%s/%s/releases/tag/v%s" % (m.group(1), m.group(2), latest) if m else ""
+
+
+def update_check_now(root):
+    """Ask the source for its version tags. Only the tag names are read, and only names like v1.2.3 count.
+    Nothing about the projects is sent. Any failure (offline, no answer in 8 seconds) is quiet."""
+    url = update_source(root)
+    latest = None
+    if url:
+        try:
+            r = subprocess.run(["git", "ls-remote", "--tags", "--refs", url], capture_output=True, text=True, timeout=8, cwd=root,
+                               env=dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_ASKPASS="", SSH_ASKPASS=""))
+            if r.returncode == 0:
+                found = [UPDATE_TAG.match(line.split("\t")[-1].strip()) for line in r.stdout.splitlines()]
+                vs = [tuple(int(x) for x in m.groups()) for m in found if m]
+                latest = "%d.%d.%d" % max(vs) if vs else None
+        except (OSError, subprocess.SubprocessError):
+            pass
+    rec = load_rec(root, UPDATE_REC, "", {}) or {}  # read again now: the user may have turned the check off meanwhile
+    rec.update(checked_at=time.time(), latest=latest, url=url or "")
+    save_rec(root, UPDATE_REC, rec)
+    return rec
+
+
+def update_off(root):
+    return os.environ.get("CREATECODEBOX_UPDATE_CHECK", "").lower() == "off" or bool((load_rec(root, UPDATE_REC, "", {}) or {}).get("off"))
+
+
+def update_kick(root):
+    """At most once a day, start the check without waiting for it. The next hook reads the result."""
+    rec = load_rec(root, UPDATE_REC, "", {}) or {}
+    if update_off(root) or time.time() - float(rec.get("checked_at") or 0) < update_every():
+        return
+    if os.environ.get("CREATECODEBOX_UPDATE_SYNC"):
+        update_check_now(root)
+        return
+    rec["checked_at"] = time.time()  # mark first, so two hooks never start two checks
+    save_rec(root, UPDATE_REC, rec)
+    kw = {"creationflags": 0x00000008 | 0x00000200} if os.name == "nt" else {"start_new_session": True}
+    try:
+        subprocess.Popen([sys.executable, "-I", os.path.abspath(__file__), "update-check", "--bg"], cwd=root,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kw)
+    except OSError:
+        pass
+
+
+def update_note(root, at_start):
+    """One line when a newer version is out: at every session start, and at most once a day during a long session.
+    Never updates by itself; the user decides."""
+    try:
+        update_kick(root)
+        if update_off(root):
+            return ""
+        rec = load_rec(root, UPDATE_REC, "", {}) or {}
+        latest, cur = vtuple(rec.get("latest")), vtuple(version(root))
+        if not latest or not cur or latest <= cur:
+            return ""
+        if not at_start and time.time() - float(rec.get("announced_at") or 0) < update_every():
+            return ""
+        rec["announced_at"] = time.time()
+        save_rec(root, UPDATE_REC, rec)
+        return T("update.note", latest=rec["latest"], current=version(root), page=update_page(rec.get("url"), rec["latest"]) or "-")
+    except Exception:  # the check must never stop a session
+        return ""
+
+
+def cmd_update_check(root, arg):
+    rec = load_rec(root, UPDATE_REC, "", {}) or {}
+    if arg in ("off", "on"):
+        rec["off"] = arg == "off"
+        save_rec(root, UPDATE_REC, rec)
+        return 0, T("update.check_" + arg)
+    if arg in ("now", "--bg"):
+        rec = update_check_now(root)
+        if arg == "--bg":
+            return 0, ""
+    elif arg:
+        return 2, T("usage")
+    latest, cur = vtuple(rec.get("latest")), vtuple(version(root))
+    off = (" " + T("update.check_is_off")) if update_off(root) else ""
+    if not update_source(root):
+        return 0, T("update.check_nosource") + off
+    if not rec.get("checked_at"):
+        return 0, T("update.check_never") + off
+    if latest and cur and latest > cur:
+        return 0, T("update.check_newer", latest=rec["latest"], current=version(root), page=update_page(rec.get("url"), rec["latest"]) or "-") + off
+    if latest:
+        return 0, T("update.check_same", current=version(root)) + off
+    return 0, T("update.check_unknown") + off
+
+
 # ---------- 書き込み・コマンドの門 ----------
 def rel_in_root(root, target):
     try:
@@ -1662,6 +1787,9 @@ def on_session_start(root, event):
     block = start_problem_block(root, event)
     if block:
         parts.append(block)
+    upd = update_note(root, at_start=True)
+    if upd:
+        parts.append(upd)
     return "\n".join(parts)
 
 
@@ -1755,7 +1883,8 @@ def on_prompt(root, event):
     soft = bool(slug) and c["stage"] in SOFT_STAGES and not trivial_prompt(prompt)
     digest = task_prompt_digest(root, c, triage, soft)
     warn = board_warn(root)  # after the approval records above: the stage on the page may have changed
-    return "\n".join(x for x in ["Reply in: " + rl, stage_text(c), round_rule(root, c), needs, first] + notes + [digest, warn] if x)
+    upd = update_note(root, at_start=False)
+    return "\n".join(x for x in ["Reply in: " + rl, stage_text(c), round_rule(root, c), needs, first] + notes + [digest, warn, upd] if x)
 
 
 def _msg_text(m):
@@ -3814,8 +3943,20 @@ def cmd_update(root):
                            capture_output=True, text=True).stdout.strip()
     if dirty:
         return 1, T("update.dirty", dirty=dirty)
-    r = subprocess.run(["git", "pull", "--ff-only"], cwd=root, capture_output=True, text=True)
-    return (0 if r.returncode == 0 else 1), (r.stdout + r.stderr).strip() + "\n" + T("update.version", v=version(root))
+    old = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True).stdout.strip()
+    try:  # never wait for a password, and never hang the session
+        r = subprocess.run(["git", "pull", "--ff-only"], cwd=root, capture_output=True, text=True, timeout=120,
+                           env=dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_ASKPASS="", SSH_ASKPASS="", GIT_SSH_COMMAND="ssh -o BatchMode=yes"))
+    except subprocess.TimeoutExpired:
+        return 1, T("update.timeout")
+    msg = (r.stdout + r.stderr).strip() + "\n" + T("update.version", v=version(root))
+    if r.returncode == 0 and old:
+        changed = subprocess.run(["git", "diff", "--name-only", old, "HEAD", "--", ".codex/hooks.json"], cwd=root,
+                                 capture_output=True, text=True).stdout.split()
+        if changed:
+            msg += "\n" + T("update.codex_hooks")
+        msg += "\n" + T("update.reopen")
+    return (0 if r.returncode == 0 else 1), msg
 
 
 # ---------- 入口 ----------
@@ -3992,6 +4133,8 @@ def cli_main(argv):
         rc, msg = cmd_with_secrets(root, rest[i + 1:], project="--project" in head, timeout=int(tv) if tv.isdigit() else 600)
     elif cmd == "update":
         rc, msg = cmd_update(root)
+    elif cmd == "update-check":
+        rc, msg = cmd_update_check(root, rest[0] if rest else "")
     else:
         print(T("usage"))
         return 2

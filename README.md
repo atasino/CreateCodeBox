@@ -71,6 +71,14 @@ To use it from a phone, or to let other people use it, you need more work. One e
 3. To see only what you made, open the file `CreateCodeBox/projects/<name>/src/index.html` in Finder (Mac) or File Explorer (Windows) and double-click it. `<name>` is the name of your project's folder inside `projects/`.
 4. After you approve the design, Claude is told to keep a list of what is left in each project. It holds your wishes, problems, and to-dos, with their dates. Before that, your answers go into `PROJECT.md`. The list is saved in the `CreateCodeBox` folder, so a new session can pick it up. Ask "what is left?" to see the list, or "show the schedule" to see the dates. The schedule is also a page you can open in a browser: `projects/schedule.html` (inside the `CreateCodeBox` folder). The page updates by itself.
 
+## Updates
+
+Once a day, CreateCodeBox checks whether a new version is out. It asks the address it was copied from (usually GitHub) for the list of version names (`git ls-remote --tags`). Nothing from your projects is sent. Like any web request, it shows your IP address to that server. If it cannot get an answer, it says nothing and tries again the next day. When a new version is out, Claude tells you in one line, with a link to the page that says what changed.
+
+It never updates by itself. To update, tell Claude "update CreateCodeBox". Claude runs `bash ws/bin/ws.sh update` for you. The update stops if you changed any file that came with CreateCodeBox (for example in `ws/`, `.claude/`, or `CLAUDE.md`). Updating does not change what is in your `projects/` folder. Then close Claude Code and open it again. If you use Codex and the update changed the hooks (the small programs Codex runs for CreateCodeBox), type `/hooks` in Codex and check that the CreateCodeBox hooks are trusted.
+
+To turn the daily check off, run `bash ws/bin/ws.sh update-check off`, or ask Claude to do it. To turn it on again, run the same command with `on` instead of `off`.
+
 ## What it does
 
 - It asks short questions, one at a time, and asks about a site or app that is close to what you want.

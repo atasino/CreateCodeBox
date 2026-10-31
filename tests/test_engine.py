@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE = os.path.abspath(os.path.join(HERE, ".."))  # the repository root is the workspace that users get
@@ -533,7 +534,7 @@ def test_hooks_g1():
         check("A2: サブコマンド単位の許可がそろう（+ Edit/Write(projects/**)）", all(("Bash(bash ws/bin/ws.sh %s:*)" % n in allow and "Bash(bash ws/bin/ws.sh %s)" % n in allow) for n in need)
               and "Edit(projects/**)" in allow and "Write(projects/**)" in allow, allow)
         check(".gitignore に .ws/ と .env 系が入っている", ".ws/" in open(os.path.join(e.root, ".gitignore")).read().split() and ".env.*" in open(os.path.join(e.root, ".gitignore")).read())
-        check("ws/VERSION は 0.4.2", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.2")
+        check("ws/VERSION は 0.4.3", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.3")
         check("ws.sh: python が無いと日英の案内で exit 1", subprocess.run(["/bin/sh", os.path.join(e.root, "ws", "bin", "ws.sh"), "version"], capture_output=True, env={"PATH": empty, "HOME": e.home}).returncode == 1)
     finally:
         e.close()
@@ -990,6 +991,104 @@ def test_read_only_options():
         bad = [c for c in ok if e.pre("Bash", command=c) is not None]
         check("読むだけの find・tree・rg は今までどおり通る（%d 例）" % len(ok), not bad, bad)
         check("ws.sh の引数の引用符の中の ( ) は今までどおり通る（zsh でもただの文字）", e.pre("Bash", command="bash ws/bin/ws.sh task add \"Fix login (urgent)\"") is None)
+    finally:
+        e.close()
+
+
+def test_update_check():
+    """A new version is checked at most once a day, told in one line, and never installed without the user."""
+    e = Env()
+    try:
+        cur = open(os.path.join(e.root, "ws", "VERSION")).read().strip()
+        major, minor, patch = (int(x) for x in cur.split("."))
+        newer = "%d.%d.0" % (major, minor + 1)
+        remote = os.path.join(e.tmp, "remote.git")
+        src = os.path.join(e.tmp, "remote_src")
+        subprocess.run(["git", "init", "-q", "--bare", remote], check=True)
+        subprocess.run(["git", "init", "-q", src], check=True)
+        g = lambda *a: subprocess.run(["git", "-C", src, "-c", "user.name=t", "-c", "user.email=t@t.invalid"] + list(a), capture_output=True, text=True)
+        open(os.path.join(src, "a"), "w").write("a")
+        g("add", "a"); g("commit", "-q", "-m", "a")
+        for tag in ("v" + cur, "v" + newer, "latest", "v99.0.0-rc1", "v98.0"):
+            g("tag", tag)
+        g("push", "-q", remote, "--tags")
+        e.env.update(CREATECODEBOX_UPDATE_URL=remote, CREATECODEBOX_UPDATE_SYNC="1")
+        start = lambda: e.ctx("sessionstart", {"source": "startup"})
+        out = start()
+        check("版: 新しい版があると、会話の始まりに 1 行で伝える（%s）" % newer, newer in out and "Do not update unless the user asks" in out, out)
+        check("版: 版の形でないタグ（latest・-rc1・2 桁）は数えない", "99.0.0" not in out and "98.0" not in out, out)
+        out = e.pctx("hello")
+        check("版: 同じ日の途中の発言では、もう一度は言わない", newer not in out, out)
+        subprocess.run(["git", "-C", remote, "tag", "-d", "v" + newer], capture_output=True)
+        out = start()
+        check("版: 24 時間たつまでは問い合わせない（前の結果のまま知らせる）", newer in out, out)
+        e.env["CREATECODEBOX_UPDATE_EVERY"] = "0"
+        out = start()
+        check("版: 24 時間たてば問い合わせ直す（同じ版なら何も言わない）", newer not in out and "CreateCodeBox" not in out.split("\n")[-1], out)
+        check("版: update-check の状態は「最新」", "newest" in e.run(["update-check"])[1] or "最新" in e.run(["update-check"])[1], e.run(["update-check"])[1])
+        g("tag", "v" + newer); g("push", "-q", remote, "--tags")
+        out = e.pctx("hello again")
+        check("版: 使い続けていても、1 日 1 回は確かめて伝える", newer in out, out)
+        rc, msg = e.run(["update-check", "off"])
+        out = start()
+        check("版: update-check off で、確かめも知らせもしない", rc == 0 and newer not in out, (msg, out))
+        e.run(["update-check", "on"])
+        check("版: update-check on で元に戻る", newer in start())
+        e.env["CREATECODEBOX_UPDATE_URL"] = os.path.join(e.tmp, "nowhere.git")
+        out = start()
+        check("版: つながらない時は黙って飛ばし、会話は普通に始まる", newer not in out and "[CreateCodeBox" in out, out)
+        rc, msg = e.run(["update-check"])
+        check("版: つながらなかったことは状態で分かる", "could not get a version" in msg or "確かめられませんでした" in msg, msg)
+        e.env.pop("CREATECODEBOX_UPDATE_SYNC")
+        e.env["CREATECODEBOX_UPDATE_URL"] = remote
+        t0 = time.time()
+        start()
+        quick = time.time() - t0
+        rec_path = os.path.join(e.root, ".ws", "update_check.json")
+        for _ in range(50):
+            try:
+                if json.load(open(rec_path)).get("latest") == newer:
+                    break
+            except (OSError, ValueError):
+                pass
+            time.sleep(0.2)
+        check("版: 問い合わせは裏で動き、会話の始まりを待たせない（%.1f 秒）" % quick, json.load(open(rec_path)).get("latest") == newer, quick)
+        import engine as eng_u
+        e.env.pop("CREATECODEBOX_UPDATE_URL")
+        os.environ.pop("CREATECODEBOX_UPDATE_URL", None)
+        check("版: git で取っていないコピーは問い合わせない", eng_u.update_source(e.root) is None)
+        subprocess.run(["git", "init", "-q", e.root], check=True)
+        subprocess.run(["git", "-C", e.root, "remote", "add", "origin", "git@github.com:someone/CreateCodeBox.git"], check=True)
+        check("版: SSH の住所は問い合わせない（パスワードを聞かれないように）", eng_u.update_source(e.root) is None)
+        subprocess.run(["git", "-C", e.root, "remote", "set-url", "origin", "https://github.com/someone/CreateCodeBox.git"], check=True)
+        check("版: フォークは自分の origin（update が取りに行く所）に問い合わせる", eng_u.update_source(e.root) == "https://github.com/someone/CreateCodeBox.git")
+        check("版: 何が変わったかのページは、こちらで組み立てる", eng_u.update_page("https://github.com/someone/CreateCodeBox.git", "1.2.3") == "https://github.com/someone/CreateCodeBox/releases/tag/v1.2.3"
+              and eng_u.update_page("https://example.com/x/y", "1.2.3") == "")
+    finally:
+        e.close()
+
+
+def test_update_codex_hooks_note():
+    """After `update`, a change to the Codex hooks is told, so Codex users trust them again."""
+    e = Env()
+    try:
+        remote = os.path.join(e.tmp, "ws_remote.git")
+        gr = lambda d, *a: subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@t.invalid"] + list(a), capture_output=True, text=True)
+        subprocess.run(["git", "init", "-q", "--bare", remote], check=True)
+        subprocess.run(["git", "init", "-q", e.root], check=True)
+        gr(e.root, "add", "-A"); gr(e.root, "commit", "-q", "-m", "v1"); gr(e.root, "branch", "-M", "main")
+        gr(e.root, "remote", "add", "origin", remote); gr(e.root, "push", "-q", "-u", "origin", "main")
+        other = os.path.join(e.tmp, "other")
+        subprocess.run(["git", "clone", "-q", "-b", "main", remote, other], check=True)  # the bare repo's HEAD may name master
+        hooks = os.path.join(other, ".codex", "hooks.json")
+        if os.path.exists(hooks):
+            open(hooks, "a").write("\n")
+            gr(other, "commit", "-q", "-am", "hooks"); gr(other, "push", "-q", "origin", "HEAD:main")
+            rc, out = e.run(["update"])
+            check("更新: Codex のフックが変わったら、/hooks で信頼し直すよう伝える", rc == 0 and "/hooks" in out, out)
+            check("更新: 開き直すよう伝える", "open it again" in out or "開き直して" in out, out)
+        else:
+            check("更新: (前提) .codex/hooks.json がある", False)
     finally:
         e.close()
 
@@ -2789,7 +2888,7 @@ def main():
 
     for fn in (test_scan, test_gate_keys_and_protect, test_records_signature, test_st_extra, test_done_and_append, test_hooks_g1, test_lang,
                test_approval_phrases, test_two_step_approval, test_start_check, test_publish_phrase, test_c3_parse, test_v02_fixture, test_stage_misc, test_stop, test_safety_commands,
-               test_new_entrance_and_render, test_harden_lists, test_references, test_place, test_read_only_options, test_compound_and_project_write, test_session_resume, test_translation,
+               test_new_entrance_and_render, test_harden_lists, test_references, test_place, test_read_only_options, test_update_check, test_update_codex_hooks_note, test_compound_and_project_write, test_session_resume, test_translation,
                test_tasks_triage, test_tasks_commands, test_schedule_dates, test_gantt_text, test_open_block_on_choice, test_tasks_digest_and_page, test_tasks_lang, test_commit_email_privacy):
         try:
             fn()

@@ -278,6 +278,18 @@ MESSAGES = {
     "update.no_git": "This folder was not taken with git, so it cannot be updated automatically. Install it again by the steps in the README.",
     "update.dirty": "The workspace machinery files have changes. Check the changes before updating:\n{dirty}",
     "update.version": "Version: {v}",
+    "update.note": "CreateCodeBox {latest} is out (this copy is {current}). Tell the user in one short line, with this page for what changed: {page}. Do not update unless the user asks. If they ask, follow ws-github (Update CreateCodeBox itself).",
+    "update.check_on": "The daily check for a new version is on.",
+    "update.check_off": "The daily check for a new version is off. To turn it on again: bash ws/bin/ws.sh update-check on",
+    "update.check_is_off": "(The daily check is off.)",
+    "update.check_newer": "A new version is out: {latest} (this copy: {current}). What changed: {page}. To update, ask Claude to update CreateCodeBox.",
+    "update.check_same": "This copy is the newest version ({current}).",
+    "update.check_unknown": "The last check could not get a version (for example, you were offline, or the address has no list of versions). It will try again the next day.",
+    "update.check_never": "No check has run yet. It runs once a day, when a session starts or while you work.",
+    "update.check_nosource": "No check: this copy has no web address (https) to ask (for example, it was not taken with git clone).",
+    "update.codex_hooks": "If you use Codex: this update changed the hooks. In Codex, type /hooks and check that the CreateCodeBox hooks are trusted.",
+    "update.timeout": "The update took too long and was stopped. Your files should be unchanged; if you are not sure, ask Claude to run git status. Try again later.",
+    "update.reopen": "Close Claude Code (or Codex) and open it again, so the new version is used.",
     "version.unknown": "unknown",
     "usage": (
         "usage: ws.sh status | list | select <name> --quote <user words> | new <name> --name <display name> --quote <user words> | "
@@ -286,7 +298,7 @@ MESSAGES = {
         "st run <ID...> [--timeout N] | st route <ID> user|ai --reason <text> | harden on|off|status [--with-denywrite] | learn [topic] | "
         "repo init|link <URL>|adopt <URL>|email <address> | save <memo> | backup | publish-check | publish | intake <file> | rules import <path> | "
         "secret open|check|path|guide <NAME>|set <NAME>|allow <fingerprint> [--project] | with-secrets [--project] [--timeout N] -- <cmd> | "
-        "excludes add <absolute path> | resign | doctor | version | update | task add|set|date|none ... | tasks [<slug>] | tasks gantt [--text]"),
+        "excludes add <absolute path> | resign | doctor | version | update | update-check [now|on|off] | task add|set|date|none ... | tasks [<slug>] | tasks gantt [--text]"),
     # ---- task board (what is left, for every project) ----
     "zone.board": "The schedule page of all projects ({rel}) is written only by ws.sh (`bash ws/bin/ws.sh tasks gantt`), so that it always shows the real state",
     "task.usage": (
