@@ -6,7 +6,8 @@ The user asked you to set up CreateCodeBox by following this file. Their message
 
 ## Rules for the whole task
 
-- Run only these four commands, and no other command (no `git -C`, no `ls -d`, no `ls -ld`, no `rev-parse`):
+- Work from the whole text of this file, not a summary. If you only have a summary (for example from a tool that reads web pages), first read the whole file with `curl` from raw.githubusercontent.com. Reading it this way is fine. Do not use `curl` for anything else.
+- Run only these four commands, and no other command (besides the `curl` read above; no `git -C`, no `ls -d`, no `ls -ld`, no `rev-parse`):
   1. `git --version`
   2. `ls <folder>` (or your file tools)
   3. `git clone <address> <folder>`

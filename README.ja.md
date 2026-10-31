@@ -26,10 +26,16 @@ CreateCodeBox は、アプリのコード（`src/`）を、あなたが承認す
 3. **次の 1 文を、Claude Code に貼り付けます。** 貼り付けたら、Enter キーを押します。貼り付けは、Mac では command + V、Windows では Shift + Insert か右クリックです。
 
 ```
-Set up CreateCodeBox by following BOOTSTRAP.md in https://github.com/atasino/CreateCodeBox
+Set up CreateCodeBox from https://github.com/atasino/CreateCodeBox. First read the whole BOOTSTRAP.md of that repository with curl from raw.githubusercontent.com (a web summary is not enough), then follow it.
 ```
 
    文の中のアドレスは、このリポジトリのものです。ほかのコピー（GitHub 上の別のコードの置き場）を使うときは、そのトップページのアドレスに置き換えてください。アドレスはブラウザのアドレス欄からコピーします。ほかのページのアドレスは使わないでください。
+
+   この 1 文は、設定の手順（`BOOTSTRAP.md`）を `curl` で取ってくるよう、Claude Code に求めます。`curl` は、Web のアドレスからファイルを取ってくる小さな道具です。取ってくる前に、Claude Code が `curl` を使う許可を求めてくることがあります。これは想定どおりです。許可を求める画面に出るコマンドは、次の形のはずです。
+
+   `curl -sL https://raw.githubusercontent.com/atasino/CreateCodeBox/main/BOOTSTRAP.md`
+
+   `curl` のすぐ後ろの `-sL` は、`-s` や `-fsSL` になることがあります。それ以外に違う所はないはずです。この形のコマンドは、`BOOTSTRAP.md` を取ってきて Claude Code に見せるだけです。ほかに違う所がある場合、たとえば `|`（パイプ）や `>` の記号が付いていたり、アドレスが別のものだったりするときは、許可しないでください。許可しなくても、この手順が止まるだけです。そのときは、下の 3 行を自分で打つこともできます。
 
    または、次の 3 行を自分で打ちます。先に、`/exit` と打って Claude Code を終了するか、2 つ目のターミナルのウィンドウを開きます。そのあと、ターミナルに 1 行ずつ打ちます。Windows の Git Bash では、[Windows の手引き](docs/setup-windows.ja.md)を見てください。
 

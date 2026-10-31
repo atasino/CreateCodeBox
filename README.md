@@ -24,10 +24,16 @@ To start, follow the six steps below.
 3. **Paste this one sentence** into Claude Code, and press Enter. (Mac: Command + V. Windows: Shift + Insert, or right-click.)
 
 ```
-Set up CreateCodeBox by following BOOTSTRAP.md in https://github.com/atasino/CreateCodeBox
+Set up CreateCodeBox from https://github.com/atasino/CreateCodeBox. First read the whole BOOTSTRAP.md of that repository with curl from raw.githubusercontent.com (a web summary is not enough), then follow it.
 ```
 
    This is the address of this repository. If you use a copy of it, replace the address with the top page of that copy. Copy it from the address bar of your browser, not from another page.
+
+   The sentence asks Claude to get the setup steps (`BOOTSTRAP.md`) with `curl`, a small tool that gets a file from a web address. Before it does, Claude Code may ask your permission to run `curl`. That is expected. The command on that screen should look like this:
+
+   `curl -sL https://raw.githubusercontent.com/atasino/CreateCodeBox/main/BOOTSTRAP.md`
+
+   The `-sL` right after `curl` may be `-s` or `-fsSL` instead. Nothing else should be different. A command like that only gets `BOOTSTRAP.md` and shows it to Claude. If anything else is different (for example a `|` (pipe) or `>` sign, or another address), say no. Saying no only stops this step. You can then type the 3 lines below instead.
 
    Or type these 3 lines yourself. First close Claude Code (type `/exit`), or open a second Terminal window. Then type the lines one at a time, in Terminal. In Git Bash on Windows, see the [Windows help](docs/setup-windows.md).
 
