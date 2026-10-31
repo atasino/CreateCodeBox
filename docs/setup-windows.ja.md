@@ -31,7 +31,7 @@ python --version
 
 ## 4. Claude Code を入れる
 
-Anthropic の公式の案内（https://code.claude.com/docs/en/overview）に従ってください。サインインに必要なものと料金は、その案内に書いてあります。そのあと、確かめます。
+Anthropic の案内（https://code.claude.com/docs/en/setup）に従ってください。サインインのしかたと、Claude Code を使えるアカウントは、その案内に書いてあります。そのあと、確かめます。
 
 ```
 claude --version

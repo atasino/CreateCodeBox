@@ -396,7 +396,7 @@ MESSAGES = {
         "Could not send. The first time, GitHub needs you to sign in. The user types the next line in a separate terminal "
         "and follows the steps in the browser (neither the AI nor this tool gets your token or password).\n"
         "  cd \"{dir}\" && git push -u origin HEAD\n"
-        "For the exact steps, check GitHub's official help.\n--- output ---\n{out}"),
+        "For the exact steps, check GitHub's help pages.\n--- output ---\n{out}"),
     "push.done": "Sent.\n{out}",
     "backup.need_save": "Run save first.",
     "backup.no_repo": "No repo is registered. First run `bash ws/bin/ws.sh repo link <https URL>`.",

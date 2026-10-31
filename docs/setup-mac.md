@@ -22,7 +22,7 @@ python3 --version
 
 ## 3. Install Claude Code
 
-Follow Anthropic's official guide: https://code.claude.com/docs/en/overview. The guide says what you need to sign in and what it costs. Then check that it works:
+Follow Anthropic's setup guide: https://code.claude.com/docs/en/setup. The guide says how to sign in and which accounts include Claude Code. Then check that it works:
 
 ```
 claude --version

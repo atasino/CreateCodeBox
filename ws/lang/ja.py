@@ -397,7 +397,7 @@ MESSAGES = {
         "送れませんでした。初めてのときは、GitHub へのサインインが要ります。"
         "利用者が、別のターミナルで次の 1 行を打ち、ブラウザの案内にしたがって承認してください（AI にも、この道具にも、トークンやパスワードは渡りません）。\n"
         "  cd \"{dir}\" && git push -u origin HEAD\n"
-        "詳しい手順は、GitHub の公式の案内で確かめてください。\n--- 出力 ---\n{out}"),
+        "詳しい手順は、GitHub の案内で確かめてください。\n--- 出力 ---\n{out}"),
     "push.done": "送りました。\n{out}",
     "backup.need_save": "先に save（セーブ）をしてください。",
     "backup.no_repo": "repo が登録されていません。先に `bash ws/bin/ws.sh repo link <https の URL>` を実行します。",

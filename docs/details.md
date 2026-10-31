@@ -47,12 +47,12 @@ Default: the model you choose in Claude Code. The helper agents `connector` and 
 
 ## Names and where to report problems
 
-- The repository is private for now while we test it.
 - Report a step that did not work in GitHub Issues. Ask questions in GitHub Discussions.
+- Report a weakness in private, as [SECURITY.md](../SECURITY.md) explains.
 
 ## What we have checked
 
-Version 0.3.0 changed a lot compared with version 0.2.0. We have run the 0.3.0 changes in unit tests and in three `-p` runs (see below). We have not run them in a real, interactive Claude Code session. The unit tests are in `tests/`: `test_engine.py` has 460 checks, and `test_hook_protocol.py` has 41. All of them pass on a Mac with Python 3.9, and in GitHub Actions on Linux with Python 3.8 and 3.12.
+The unit tests are in `tests/`. In version 0.4.6, `test_engine.py` has 689 checks, `test_hook_protocol.py` has 41, and `test_codex.py` has 162. All of them pass on a Mac with Python 3.9, and in GitHub Actions on Linux with Python 3.8 and 3.12. We have not run the workspace in a real, interactive Claude Code session. The real runs below are `-p` runs (one request, one answer).
 
 ### Real runs on version 0.2.0
 

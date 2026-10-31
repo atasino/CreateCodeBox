@@ -27,7 +27,7 @@ The colored boxes marked "Your turn" are where you answer. Claude is told to do 
 
 To start, follow the six steps below.
 
-1. **Install Claude Code.** Follow Anthropic's [official guide](https://code.claude.com/docs/en/overview). The guide explains how to sign in and what it costs. You also need `git` and Python 3 (3.8 or newer; we tested 3.9, see [details](docs/details.md)). Help: [Mac](docs/setup-mac.md), [Windows](docs/setup-windows.md).
+1. **Install Claude Code.** Follow Anthropic's [setup guide](https://code.claude.com/docs/en/setup). The guide explains how to install it, how to sign in, and which accounts include Claude Code. You also need `git` and Python 3 (3.8 or newer; we tested 3.9, see [details](docs/details.md)). Help: [Mac](docs/setup-mac.md), [Windows](docs/setup-windows.md).
 2. **Make a folder for your app, and open Claude Code in it.** One folder holds one app. Name it with English letters, numbers, and `-`, and no spaces, for example `coffee-log`. Put it in your home folder (the folder with your user name). Do not put it on the Desktop, in Documents or Downloads, or in a folder that iCloud, OneDrive, or Dropbox syncs. If your user name has a space or non-English letters, Claude is told to suggest another place. The first time, Claude Code may ask you to sign in.
    - **Terminal** (the window where you type commands): Mac: press the Command key and the Space bar together, type "Terminal", press Enter. Windows: open Git Bash (it comes with Git; see the [Windows help](docs/setup-windows.md)). Then type these three lines, one at a time: `mkdir ~/coffee-log`, then `cd ~/coffee-log`, then `claude`.
    - **Visual Studio Code:** make the folder first. Then, in VS Code's menu, choose File, then Open Folder, and choose it. Open Claude Code there with **✻ Claude Code** at the bottom right. We have not tried CreateCodeBox in VS Code yet.
@@ -172,6 +172,6 @@ If a step does not work, it may not be your mistake. Something may be missing fr
 
 For questions, use [Discussions](https://github.com/atasino/CreateCodeBox/discussions).
 
-CreateCodeBox is not an official Anthropic product.
+CreateCodeBox is not an Anthropic product. It is not affiliated with or endorsed by Anthropic.
 
 License: MIT. See [LICENSE](LICENSE).

@@ -29,7 +29,7 @@ CreateCodeBox は、アプリのコード（`src/`）を、あなたが承認す
 
 始めるには、次の 6 つの手順で進めます。
 
-1. **Claude Code を入れます。** Anthropic の[公式の案内](https://code.claude.com/docs/en/overview)に従ってください。サインインのしかたと料金は、その案内に説明があります。`git` と Python 3 も要ります。3.8 以上で、私たちが試したのは 3.9 です。詳しくは[こちら](docs/details.md)を見てください。手引きは、[Mac](docs/setup-mac.ja.md)（[English](docs/setup-mac.md)）と [Windows](docs/setup-windows.ja.md)（[English](docs/setup-windows.md)）にあります。
+1. **Claude Code を入れます。** [Anthropic の案内](https://code.claude.com/docs/en/setup)に従ってください。入れ方、サインインのしかた、Claude Code を使えるアカウントは、その案内に説明があります。`git` と Python 3 も要ります。3.8 以上で、私たちが試したのは 3.9 です。詳しくは[こちら](docs/details.md)を見てください。手引きは、[Mac](docs/setup-mac.ja.md)（[English](docs/setup-mac.md)）と [Windows](docs/setup-windows.ja.md)（[English](docs/setup-windows.md)）にあります。
 2. **アプリ用のフォルダを作り、そこで Claude Code を開きます。** 1 つのフォルダに、アプリを 1 つ入れます。名前は、英字・数字・`-` だけで、空白を入れません。たとえば `coffee-log` です。置き場所は、ホームフォルダ（あなたのユーザー名のフォルダ）の中にします。デスクトップ・書類・ダウンロードの中や、iCloud・OneDrive・Dropbox が同期しているフォルダの中には置かないでください。ユーザー名に空白や日本語が入っているときは、別の場所を提案するよう、Claude に指示してあります。初回は、Claude Code がサインインを求めることがあります。
    - **ターミナル**（コマンドを打つウィンドウ）: Mac では、command キーとスペースキーを同時に押し、「ターミナル」と入力して、return キーを押します。Windows では、Git Bash を開きます（Git に付いてきます。[Windows の手引き](docs/setup-windows.ja.md)を見てください）。そのあと、次の 3 行を 1 行ずつ打ちます: `mkdir ~/coffee-log`、`cd ~/coffee-log`、`claude`。
    - **Visual Studio Code**: 先にフォルダを作ります。VS Code のメニューで、ファイル（File）、フォルダーを開く（Open Folder）の順に選び、そのフォルダを選びます。右下の **✻ Claude Code** から、Claude Code を開きます。VS Code では、CreateCodeBox をまだ試していません。
@@ -174,6 +174,6 @@ Gakaso は、CreateCodeBox と同じチームが作っているデザインツ�
 
 質問は [Discussions](https://github.com/atasino/CreateCodeBox/discussions) に書いてください。
 
-CreateCodeBox は Anthropic の公式製品ではありません。
+CreateCodeBox は Anthropic の製品ではありません。Anthropic との提携や、Anthropic による後援もありません。
 
 ライセンス: MIT です。[LICENSE](LICENSE) を見てください。

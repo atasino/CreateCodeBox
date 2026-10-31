@@ -29,7 +29,7 @@ On some PCs the Python command is `python3` or `py`. Any of the three is fine, a
 
 ## 4. Install Claude Code
 
-Follow Anthropic's official guide: https://code.claude.com/docs/en/overview. The guide says what you need to sign in and what it costs. Then check:
+Follow Anthropic's setup guide: https://code.claude.com/docs/en/setup. The guide says how to sign in and which accounts include Claude Code. Then check:
 
 ```
 claude --version
