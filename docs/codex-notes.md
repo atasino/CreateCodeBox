@@ -1,6 +1,6 @@
 # Codex notes (for developers)
 
-What CreateCodeBox knows about Codex, with the source of each fact. Codex support is a **preview**.
+What CreateCodeBox knows about Codex, with the source of each fact. We tested only part of the Codex support, and less than the Claude Code version.
 
 Sources (fetched 2026-10-31; the pages can change, so check them again before you rely on a detail):
 

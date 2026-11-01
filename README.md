@@ -12,7 +12,7 @@ If you give Claude only the address of this page, it may only describe the page.
 
 CreateCodeBox is a workspace for turning an idea into an app with Claude Code, one step at a time, looking at the screen as you go. Before Claude builds the app, you see a first version of its screen. The first version is a prototype, not the real app. Claude is told to ask about a site or app that is close to what you want. If you name a site or app, the prototype has a similar layout and flow to it. It is filled with made-up data.
 
-Status: preview. So far, we have tried it with apps that run on your own computer. If you get stuck, it helps to have someone nearby who can answer questions.
+Status: early version. So far, we have tried it with apps that run on your own computer. If you get stuck, it helps to have someone nearby who can answer questions.
 
 What we have checked so far: three test runs on a Mac, with permission prompts turned off. They went as far as the first picture. We have also run the one-sentence start in step 3 on a Mac, only in test runs with permission prompts turned off. We have not checked the build stage, Windows, or normal sessions. Details: [docs/details.md](docs/details.md).
 
@@ -122,9 +122,9 @@ Each thing you make has its own folder inside `projects/`:
 - **GitHub.** Saving stays on your computer. Claude is told to send nothing to GitHub until you give it a GitHub address and ask for a backup (a private copy on GitHub). To publish (make a public copy), you type `publish` yourself.
 - **Limits.** These checks make it harder to skip a step, such as writing code before you approve. They cannot stop everything. Code that Claude runs may avoid some of them. The workspace does not check that Claude's notes about what it ran are true. Details are in [docs/security.md](docs/security.md).
 
-## Use with Codex (preview)
+## Use with Codex
 
-CreateCodeBox can also run in Codex, OpenAI's coding tool that you use in Terminal. This is a **preview**. We tested only part of it, and we tested it less than the Claude Code version.
+CreateCodeBox can also run in Codex, OpenAI's coding tool that you use in Terminal. We tested only part of it, and we tested it less than the Claude Code version.
 
 1. Install Codex and sign in. Follow OpenAI's own guide. You also need `git` and Python 3 (3.8 or newer), as in step 1 above.
 2. Open Terminal (see step 2 above), type `codex`, and press Enter. Then paste this one sentence into Codex:
