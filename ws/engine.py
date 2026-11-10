@@ -17,6 +17,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import unicodedata
 
@@ -138,6 +139,16 @@ AFFIRM_JA = re.compile(r"いい|良い|よい|はい|うん|オーケー|大丈�
 # The only replies that answer the approval question with yes (two-step approval, see on_prompt). A small strict list: nothing else is a yes.
 YES_EN = re.compile(r"^(yes|y|yes,? please|yes,? record it)$")
 YES_JA = re.compile(r"^(はい|はい、?お願いします|お願いします)$")
+# A reply has the next-step line when one of its lines starts with the mark (after spaces, `**`, `>` or a list dash).
+NEXT_MARK = re.compile(r"(?m)^[ \t]*(?:(?:\*{1,3}|_{1,3}|`|>|#{1,6}[ \t]|[-+][ \t]|\d{1,2}[.)][ \t])[ \t]*)*[\u25b6\u25ba]")
+# The user says the app is finished (a short message): the goal question may be asked again in the same session.
+FINISHED_EN = re.compile(r"(?<![A-Za-z'])(finished|finish|done|complete|completed)(?![A-Za-z'])")
+UNMET_EN = re.compile(r"(does ?n[o']t|doesnt|did ?n[o']t|not) do what i wanted|not what i wanted")
+UNMET_JA = re.compile(r"思っていたのと違|作りたかった(物|もの)と違|望んだ(物|もの)と違")
+FINISHED_JA = re.compile(r"完成|できた|できました|終わり|終わった|完了")
+# "Finish as it is": the user's own word ends the build stage with Claude's checks (or build rows) still open. Exact words only, no two-step.
+FINISH_EN = re.compile(r"^(finish|finish as it is|use it as it is)$")
+FINISH_RE = re.compile(r"^\s*(完成にする|完成にします|このまま使う|このまま使います|これで完成|これで完成です|これで完成にする|これで完成にします)[。！!\s]*$")
 CONFIRM_KIND = {"R3": "r3", "R4A": "r4a"}  # the two stages that have a two-step approval. publish and anything that sends data out never do.
 
 GIT_RAW = re.compile(r"(^|[\s;&|(])git\s+(?:-[^\s]+\s+(?:[^\s-][^\s]*\s+)?)*(push|remote|commit|add)\b")
@@ -147,8 +158,12 @@ INLINE_CODE = re.compile(r"(^|\s)(python3?|node|ruby|perl)\s+(-c|-e)\b")
 WS_CMD = re.compile(r"^(bash\s+|sh\s+)?(\./)?ws/bin/ws\.sh(\s|$)")
 MCP_CMD = re.compile(r"^claude\s+mcp\s+(list|get|add)\b")
 GANTT_REL = "projects/schedule.html"  # the schedule page of all projects: written only by ws.sh
+GUIDE_REL = "projects/guide.html"  # the guide page (where the user is, and the one next step): written only by ws.sh and the hooks
+GUIDE_DATA_REL = "projects/guide.data.js"  # the same data as a script, so that the open page can update without a reload
 PATCH_HEADER = re.compile(r"^\*\*\* (Add File|Update File|Delete File|Move to): (.*)$")
-PROTECT_MENTION = re.compile(r"(\.ws\b|\.claude\b|\.codex\b|CLAUDE\.md|CLAUDE\.local\.md|AGENTS\.md|AGENTS\.override\.md|BOOTSTRAP\.codex|ws/engine|ws/bin|\.mcp\.json|projects/schedule\.html)")
+# the pages that the engine writes, by their bare names, in any case: the two files of the guide page, and the schedule pages
+GUIDE_MENTION = re.compile(r"guide\.data\.js|guide\.html|schedule\.html", re.I)
+PROTECT_MENTION = re.compile(r"(\.ws\b|\.claude\b|\.codex\b|CLAUDE\.md|CLAUDE\.local\.md|AGENTS\.md|AGENTS\.override\.md|BOOTSTRAP\.codex|ws/engine|ws/bin|\.mcp\.json|projects/schedule\.html|projects/guide\.html|projects/guide\.data\.js)")
 
 
 # ---------- I/O parts ----------
@@ -182,9 +197,16 @@ def read_text(path):
 def write_text(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = "%s.tmp%d" % (path, os.getpid())
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        f.write(text)
-    os.replace(tmp, path)
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):  # the write or the move failed: leave nothing behind
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
 
 
 def load_json(path, default=None):
@@ -397,7 +419,7 @@ def load_rec(root, name, slug="", default=None):
     return default
 
 
-REC_PREFIXES = ("approval_", "confirm_", "st_", "schedule_", "publish_check_", "publish_ok_", "repo_", "tasks_")
+REC_PREFIXES = ("approval_", "confirm_", "st_", "schedule_", "publish_check_", "publish_ok_", "repo_", "tasks_", "goal_", "accept_")
 
 
 def slug_of_rec(name):
@@ -561,6 +583,37 @@ def brief_ok(root, slug):
     return True, []
 
 
+GREY_OK = re.compile(r"monochrome|grey only|gray only|black and white|白黒|モノクロ|グレーだけ|灰色だけ", re.I)
+NAMED_COLOURS = re.compile(r"(?<![-\w])(red|blue|green|teal|orange|purple|pink|navy|indigo|violet|gold|coral|crimson|tomato|royalblue|"
+                           r"steelblue|seagreen|forestgreen|darkgreen|darkblue|brown|maroon|olive|turquoise|salmon|magenta|cyan|yellow)(?![-\w])", re.I)
+
+
+def design_is_grey(root, slug):
+    """The design page (design/ui/index.html) has no colour yet: no `--accent` property, and every colour in its styles is a grey.
+    False when the page is missing, or when brief.md says the look is meant to be monochrome. A cheap scan for one note; never a gate."""
+    t = read_text(os.path.join(design_dir(root, slug), "ui", "index.html"))
+    if not t:
+        return False
+    if GREY_OK.search(" ".join((brief_sections(root, slug) or {}).get("color", []))):
+        return False
+    css = " ".join(re.findall(r"(?is)<style\b[^>]*>(.*?)</style>", t)) + " " + " ".join(re.findall(r'(?is)\sstyle="([^"]*)"', t))
+    if re.search(r"--accent\s*:", css) or NAMED_COLOURS.search(css):
+        return False
+    grey = lambda r, g, b: max(r, g, b) - min(r, g, b) <= 12
+    for h in re.findall(r"#([0-9a-fA-F]{3,8})\b", css):
+        if len(h) in (3, 4):
+            h = "".join(ch * 2 for ch in h[:3])
+        if len(h) in (6, 8) and not grey(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)):
+            return False
+    for r, g, b in re.findall(r"rgba?\(\s*(\d{1,3})[\s,]+(\d{1,3})[\s,]+(\d{1,3})", css):
+        if not grey(int(r), int(g), int(b)):
+            return False
+    for sat in re.findall(r"hsla?\(\s*[-\d.]+(?:deg)?[\s,]+([\d.]+)%", css):
+        if float(sat) >= 10:
+            return False
+    return True
+
+
 def sketch_path(root, slug):
     return os.path.join(design_dir(root, slug), "ui", "sketch.html")
 
@@ -704,6 +757,11 @@ def _compute(root, slug=None):
     st = st_summary(root, slug)
     if all(r.get("status") in ("done", "hold") for r in sched["rows"]) and first_version_done(st):
         return dict(base, stage="DONE", todo=[], st=st)
+    acc = load_rec(root, "accept_%s.json" % slug, slug, {}) if os.path.exists(os.path.join(ws_dir(root), "accept_%s.json" % slug)) else {}
+    if isinstance(acc, dict) and acc.get("hash") == design_hash(root, slug):
+        # the user's own word "finish": done as it is, with what Claude did not check or mark shown honestly (accept_line)
+        open_rows = sum(1 for r in sched["rows"] if isinstance(r, dict) and r.get("gate") != "systemtest" and r.get("status") not in ("done", "hold"))
+        return dict(base, stage="DONE", todo=[], st=st, accepted={"checks": (st["ai_total"] - st["ai_pass"]) if st else 0, "rows": open_rows})
     return dict(base, stage="RUN", st=st, todo=([T("todo.run.st", u=st["user_pass"], ut=st["user_total"], a=st["ai_pass"], at=st["ai_total"],
                                                     n=st["normal_pass"], nt=st["normal_total"])] if st else []))
 
@@ -718,9 +776,30 @@ def stage_text(c):
         s = c["st"]
         out += " " + T("stage.done", u=s["user_pass"], ut=s["user_total"], a=s["ai_pass"], at=s["ai_total"],
                        n=s["total"] - s["pass"]) + " " + T("stage.open", slug=c["slug"])
+        if accept_line(c):
+            out += " " + accept_line(c)
     if c.get("warn"):
         out += "\n" + "\n".join(c["warn"])
     return out
+
+
+def accept_line(c):
+    """One sentence when the first version is done by the user's word "finish": what Claude left unchecked or unmarked."""
+    a = c.get("accepted")
+    if not isinstance(a, dict) or not (a.get("checks") or a.get("rows")):
+        return ""
+    return T("stage.accepted", n=a.get("checks", 0), rows=a.get("rows", 0))
+
+
+def accept_ready(root, slug):
+    """The user's word "finish" can be recorded: the app exists, and the user has passed every one of their own checks."""
+    sm = st_summary(root, slug)
+    return bool(os.path.isfile(os.path.join(projects_dir(root), slug, "src", "index.html"))
+                and sm and sm["user_total"] > 0 and sm["user_pass"] == sm["user_total"])
+
+
+def is_finish(prompt):
+    return is_phrase(prompt, FINISH_RE, FINISH_EN)
 
 
 def round_rule(root, c):
@@ -1127,8 +1206,10 @@ def write_zone(root, stage, slug, target):
     parts = rel.split("/")
     if parts[0] in PROTECTED_TOP or rel in PROTECTED_FILES:
         return False, T("zone.protected", rel=rel)
-    if rel == GANTT_REL:
+    if rel.lower() == GANTT_REL:
         return False, T("zone.board", rel=rel)
+    if rel.lower() in (GUIDE_REL, GUIDE_DATA_REL):  # also in another case: the same file on a Mac or on Windows
+        return False, T("zone.guide", rel=rel)
     if parts[0] != "projects":
         return False, T("zone.not_projects", rel=rel)
     if stage == "R0" or not slug:
@@ -1394,6 +1475,21 @@ def staged_has_key(root):
     return bool(diff_findings(root, out))
 
 
+def guide_hit(cmd):
+    """The command names a page that the engine writes: guide.html, guide.data.js or schedule.html (also hidden by quotes,
+    backslashes, $x or [s])."""
+    a = re.sub(r"[\"'\\]", "", cmd)
+    b = re.sub(r"\$\{?[A-Za-z_][A-Za-z0-9_]*\}?", "", a)
+    c = re.sub(r"\[(.)\]", r"\1", b).replace("*", "").replace("?", "")
+    return any(GUIDE_MENTION.search(f) for f in (cmd, a, b, c))
+
+
+def is_guide_file(root, path, cwd):
+    t = os.path.realpath(path if os.path.isabs(path) else os.path.join(cwd, path))
+    rel = rel_in_root(root, t)
+    return bool(rel) and rel.lower() in (GUIDE_REL, GUIDE_DATA_REL)
+
+
 def protect_hit(cmd):
     """The command mentions a workspace-machinery path, even when it is hidden by quotes, backslashes, $x, [s] or *."""
     a = re.sub(r"[\"'\\]", "", cmd)
@@ -1529,6 +1625,8 @@ def gate(root, event):
                 return secret_msg
             if isinstance(p, str) and p and imported_instruction(root, p, cwd):
                 return T("deny.imported_instr")
+            if isinstance(p, str) and p and tool not in EDIT_TOOLS and is_guide_file(root, p, cwd):
+                return T("deny.guide_file")  # the page carries a word that only the engine and the page know
     if tool in EDIT_TOOLS:
         p0 = ti.get("file_path") or ti.get("notebook_path") or ""
         if has_key(edit_body(tool, ti), str(p0), root=root):
@@ -1544,6 +1642,8 @@ def gate(root, event):
             return T("deny.imported_instr_cmd")
         if not WS_CMD.match(cmd0) and (SECRET_CMD.search(cmd0) or glob_hits_secret(cmd0, cwd)):
             return secret_msg
+        if not WS_CMD.match(cmd0) and guide_hit(cmd0):
+            return T("deny.guide_file")  # at every stage, for reading too: only ws.sh touches the pages that the engine writes
         if "*** Begin Patch" in cmd0 and not WS_CMD.match(cmd0):
             why = gate_patch(root, stage, slug, cwd, patch_in_command(cmd0), where)  # a patch typed into the shell: the same checks
             if why:
@@ -1626,6 +1726,382 @@ def gate(root, event):
     return None
 
 
+# ---------- the next step, the guide page, the recap, the goal answer ----------
+# What the user does next is computed here from the same facts as the stage, so the context, the Stop check, `ws.sh next`,
+# `ws.sh where` and the guide page all say the same thing. The model is told to end each reply with it; it does not decide it.
+GUIDE_LINKS = (("prototype", "design/ui/sketch.html"), ("design", "design/ui/index.html"), ("table", "design/io.html"),
+               ("plan", "design/schedule.html"), ("checks", "design/systemtest.html"), ("app", "src/index.html"))
+
+
+def goal_state(root, slug):
+    """The user's answer to "does it do what you wanted?" for the design as it is now: True, False, or None
+    (not answered yet, or the design changed after the answer, or the record does not verify)."""
+    name = "goal_%s.json" % slug
+    if not os.path.exists(os.path.join(ws_dir(root), name)):
+        return None
+    rec = load_rec(root, name, slug)
+    if isinstance(rec, dict) and isinstance(rec.get("reached"), bool) and rec.get("hash") == design_hash(root, slug):
+        return rec["reached"]
+    return None
+
+
+def goal_line(root, slug):
+    """One line for status / st list / where: what the user answered to the goal question."""
+    g = goal_state(root, slug)
+    return T("goal.state.yes" if g is True else ("goal.state.no" if g is False else "goal.state.none"))
+
+
+def build_rows(root, slug):
+    """The build steps of the schedule. The last row (the check of the test list) is not a build step."""
+    sc = load_schedule(root, slug)
+    if not isinstance(sc, dict) or not isinstance(sc.get("rows"), list):
+        return []
+    return [r for r in sc["rows"] if isinstance(r, dict) and r.get("gate") != "systemtest"]
+
+
+def build_open(root, slug):
+    return any(r.get("status") not in ("done", "hold") for r in build_rows(root, slug))
+
+
+def guide_step(root, c):
+    """The step of the six that the user sees: 1 Ask, 2 Reference, 3 Prototype, 4 Approve, 5 Build, 6 Check."""
+    st, slug = c.get("stage"), c.get("slug")
+    if not slug or st in ("R0", "R1"):
+        return 1
+    if st == "R2":
+        return 2 if new_entrance(root, slug) and not references_ok(parse_project(root, slug)) else 3
+    if st == "R3":
+        return 3
+    if st in ("R4", "R4A"):
+        return 4
+    if st == "RS":
+        return 5
+    if st == "RUN":
+        return 5 if build_open(root, slug) else 6
+    return 6
+
+
+def next_step(root, c, sess=None):
+    """{"kind", "text", "say"}: the one thing the user does next. kind is answer / say / look / check / wait / done.
+    `say` is the exact word to type when one is needed, else "".
+    `wait` (the missing thing is Claude's) is given only while Claude's turn is running (turn: claude, from a prompt until the reply
+    ends). When it is the user's turn and the missing thing is still Claude's, Claude has stopped: the step is then the word that
+    lets Claude go on, so the user is never told to wait for work that nobody is doing."""
+    sess = sess if sess is not None else get_session(root)
+    ns = next_base(root, c, sess)
+    if ns["kind"] == "wait" and sess.get("turn") != "claude":
+        return paused_step(root, c, ns)
+    return ns
+
+
+def paused_step(root, c, ns):
+    """The step when Claude stopped before its own work was finished: type the word to let Claude go on.
+    At the build stage, when the user's own checks are all passed and the app exists, the user may also finish as it is."""
+    slug = c.get("slug")
+    if slug and c.get("stage") == "RUN" and accept_ready(root, slug):
+        sm = st_summary(root, slug)
+        left = sm["ai_total"] - sm["ai_pass"]
+        return {"kind": "say", "say": T("word.finish"),
+                "text": T("next.paused_finish", n=left, go=T("word.continue"), finish=T("word.finish")) if left
+                else T("next.paused_finish0", go=T("word.continue"), finish=T("word.finish"))}
+    return {"kind": "say", "text": T("next.paused"), "say": T("word.continue")}
+
+
+def next_base(root, c, sess):
+    """The step from the files alone (see next_step)."""
+    st, slug = c.get("stage"), c.get("slug")
+
+    def out(kind, key, say="", **kw):
+        return {"kind": kind, "text": T("next." + key, **kw), "say": say}
+    if not slug or st == "R0":
+        return out("answer", "r0" if list_projects(root) else "none")
+    pend = sess.get("pending_confirm")
+    if (isinstance(pend, dict) and pend.get("n") == sess.get("prompts") and pend.get("slug") == slug
+            and CONFIRM_KIND.get(st) == pend.get("kind")):
+        return out("answer", "confirm")  # the approval question was asked in this turn: the next thing is a yes, or a change
+    if st == "R1":
+        return out("answer", "r1.goal" if filled(parse_project(root, slug).get("what")) else "r1.what")
+    if st == "R2":
+        if new_entrance(root, slug):
+            if not references_ok(parse_project(root, slug)):
+                return out("answer", "r2.ref")
+            if not sketch_ok(root, slug):
+                return out("wait", "r2.sketch")
+        return out("look", "r2.look") if sketch_ok(root, slug) else out("answer", "r2.answer")
+    if st == "R3":
+        return out("say", "r3", T("word.r3"))
+    if st == "R4":
+        return out("wait", "r4")
+    if st == "R4A":
+        return out("say", "r4a", T("word.r4a"))
+    if st == "RS":
+        return out("wait", "rs")
+    if st == "RUN":
+        if build_open(root, slug):
+            return out("wait", "run.build")
+        rows = (st_load(root, slug) or {"rows": []})["rows"]
+        mine = [r for r in rows if r.get("who", "user") != "ai"]
+        todo = sum(1 for r in mine if r.get("status") not in ("pass", "fail"))
+        if todo:  # the user's own checks: how many are left to try
+            return out("check", "run.check1") if todo == 1 else out("check", "run.check", n=todo)
+        bad = sum(1 for r in mine if r.get("status") == "fail")
+        if bad:  # the user said something did not work: it is Claude's move
+            return out("wait", "run.fix", n=bad)
+        left = sum(1 for r in rows if r.get("who", "user") == "ai" and r.get("kind") == "N" and r.get("status") != "pass")
+        if left:  # a normal case that cannot be triggered by hand (a timer job): the first version waits for it
+            return out("wait", "run.claude", n=left)
+        return out("wait", "run.close")  # every condition is met: only the last row of the schedule is not marked yet
+    g = goal_state(root, slug)
+    if g:
+        return out("done", "done.yes", path="projects/%s/src/index.html" % slug)
+    if g is False:
+        return out("answer", "done.no")
+    # not answered: the question is the next step only after it was put to the user in this session (a reply named both answers)
+    return out("answer", "done.ask" if goal_put(root, slug, sess) else "done.idle")
+
+
+def next_lines(ns):
+    """The next step as the line(s) for the context and for `ws.sh next`."""
+    return [T("next.line", text=ns["text"])] + ([T("next.say", say=ns["say"])] if ns.get("say") else [])
+
+
+def next_inline(ns):
+    """The next step on one line: the sentence, then the exact words when there are any. No space after a Japanese full stop."""
+    if not ns.get("say"):
+        return ns["text"]
+    return ns["text"] + ("" if ns["text"].endswith(("。", "．")) else " ") + T("next.say", say=ns["say"])
+
+
+def next_context(root, c):
+    """For the hooks: the next-step line(s) and the fixed rule about the last line of the reply. Never raises."""
+    try:
+        return "\n".join(next_lines(next_step(root, c)) + [T("rule.next")])
+    except Exception:
+        return ""
+
+
+def where_text(root, c, sess=None):
+    """The recap for a user who is not sure what to do: the goal, the step, what is done, the one next step, and the words that always work."""
+    slug = c.get("slug")
+    p = parse_project(root, slug) if slug else {}
+    step = guide_step(root, c)
+    ns = next_step(root, c, sess)
+    done = []
+    if slug:
+        done.append(T("where.d.project"))
+        if sketch_ok(root, slug):
+            done.append(T("where.d.sketch"))
+        at = STAGES.index(c["stage"]) if c.get("stage") in STAGES else 0
+        if at > STAGES.index("R3") and p.get("has_ui") == "yes":
+            done.append(T("where.d.design"))
+        if at > STAGES.index("R4A"):
+            done.append(T("where.d.plan"))
+        rows = build_rows(root, slug)
+        if rows:
+            done.append(T("where.d.built", n=sum(1 for r in rows if r.get("status") == "done"), m=len(rows)))
+        sm = st_summary(root, slug)
+        if sm and sm["user_total"]:
+            done.append(T("where.d.checked", p=sm["user_pass"], t=sm["user_total"]))
+    lines = [T("where.goal", what=p["what"] if filled(p.get("what")) else T("where.goal_none")),
+             T("where.step", n=step, name=T("html.guide.step.%d" % step), hint=T("html.guide.hint.%d" % step)),
+             T("where.done", items=T("sep.item").join(done) if done else T("where.done.none"))]
+    if slug and c.get("stage") == "DONE":
+        if accept_line(c):
+            lines.append(accept_line(c))
+        lines.append(goal_line(root, slug))
+    lines.append(T("where.next", text=next_inline(ns)))
+    lines.append(T("where.always"))
+    return "\n".join(lines)
+
+
+def guide_data(root):
+    """What the guide page shows (the shape of ws/render/sample_guide.json): the active project with its goal, step, next step,
+    the pages that exist, the build and check counts and the goal answer; and the other projects."""
+    sess = get_session(root)
+    c = compute(root)
+    slug = c.get("slug")
+    proj = None
+    if slug:
+        p = parse_project(root, slug)
+        rows = build_rows(root, slug)
+        sm = c.get("st") or st_summary(root, slug) or {}
+        base = os.path.join(projects_dir(root), slug)
+        links = [{"id": i, "href": "%s/%s" % (slug, rel)} for i, rel in GUIDE_LINKS if os.path.isfile(os.path.join(base, *rel.split("/")))]
+        if os.path.isfile(board_page_path(root)):
+            links.append({"id": "schedule", "href": "schedule.html"})
+        proj = {"slug": slug, "name": c.get("name") or slug,
+                "goal": p["what"] if filled(p.get("what")) else "",
+                "goal_for": p.get("goal_type") if p.get("goal_type") in GOAL_TYPES else "",
+                "step": guide_step(root, c), "next": next_step(root, c, sess), "links": links,
+                "build": {"done": sum(1 for r in rows if r.get("status") == "done"), "total": len(rows)},
+                "checks": {"you_pass": sm.get("user_pass", 0), "you_total": sm.get("user_total", 0),
+                           "claude_pass": sm.get("ai_pass", 0), "claude_total": sm.get("ai_total", 0)},
+                "goal_reached": goal_state(root, slug)}
+    others = []
+    for sl in list_projects(root):
+        if sl != slug:
+            ci = compute(root, sl)
+            others.append({"slug": sl, "name": ci.get("name") or sl, "step": guide_step(root, ci)})
+    out = {"generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "version": version(root),
+           "turn": "claude" if sess.get("turn") == "claude" else "you", "project": proj, "others": others}
+    if proj is None:
+        out["next"] = next_step(root, c, sess)  # no project chosen (or none yet): the page still shows the one next step
+    return out
+
+
+def guide_token(root):
+    """A word for this workspace that the page and its data file share: the page takes new data only from a call that carries it
+    (see render_guide). It is made from the signing key, which is outside the workspace (~/.createcodebox, a place the AI cannot
+    read), and the workspace path. It is not stored anywhere. Without a usable key it is made from the path alone (then it only
+    tells one workspace's files from another's)."""
+    st = get_state(root)
+    if "guide_token" in st:  # 0.5.0 builds before this kept a copy in .ws/state.json: remove it
+        save_rec(root, "state.json", {k: v for k, v in st.items() if k != "guide_token"}, "")
+    key = ws_key(create=True)
+    text = ("guide:" + os.path.realpath(root)).encode("utf-8")
+    return (hmac.new(key, text, hashlib.sha256) if key else hashlib.sha256(text)).hexdigest()[:16]
+
+
+def guide_page_path(root):
+    return os.path.join(root, *GUIDE_REL.split("/"))
+
+
+def guide_template_path(root):
+    return os.path.join(root, "ws", "render", "guide.template.html")
+
+
+def render_guide(root):
+    """Write projects/guide.html and projects/guide.data.js. Returns the path of the page, or None when the template is missing.
+    A file is written only when its content changed (the time of the last change does not count as a change)."""
+    data = guide_data(root)
+    if not os.path.isfile(guide_template_path(root)):
+        return None
+    token = guide_token(root)
+    out = _embed(guide_template_path(root), data, "guide", token)
+    if out is None:
+        return None
+    same = lambda t: re.sub(r'"generated": "[^"]*"', '"generated": ""', t or "")
+    path = guide_page_path(root)
+    if same(read_text(path)) != same(out):
+        write_text(path, out)
+    body = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    js = "window.__CCB_GUIDE__ && window.__CCB_GUIDE__(%s, %s);\n" % (json.dumps(token), body)
+    jpath = os.path.join(root, *GUIDE_DATA_REL.split("/"))
+    if same(read_text(jpath)) != same(js):
+        write_text(jpath, js)
+    return path
+
+
+def refresh_guide(root):
+    """Render the guide page when a project exists, and never raise (a hook or a command must not break because of it).
+    Returns the path, or None when nothing was written (no project, no template, or an error)."""
+    try:
+        return render_guide(root) if list_projects(root) else None
+    except Exception:
+        return None
+
+
+def guide_note(root):
+    """For the hooks: update the guide page. Until the page was opened once, one line that tells the model to open it. Never raises."""
+    try:
+        if refresh_guide(root) is None or get_state(root).get("guide_opened"):
+            return ""
+        return T("note.guide_open")
+    except Exception:
+        return ""
+
+
+def cmd_guide(root):
+    try:
+        path = render_guide(root)
+    except Exception:
+        path = None
+    if path is None:
+        return 1, T("render.no_template", name="guide.template.html")
+    rc, msg = open_file(root, path)
+    set_state(root, guide_opened=True)  # also when the browser did not open: the message gives the path, and the note is not repeated
+    return rc, msg + "\n" + T("guide.page", path=path)
+
+
+def cmd_next(root):
+    c = compute(root)
+    sess = get_session(root)
+    lines = next_lines(next_step(root, c, sess))
+    slug = c.get("slug")
+    if slug and c.get("stage") == "DONE" and goal_state(root, slug) is None and not goal_put(root, slug, sess):
+        # the first version was just finished in this turn: the model is told here to ask the goal question
+        lines.append(goal_ask_note(root, slug, reply_lang(root)))
+        set_session(root, goal_asked={"slug": slug, "hash": design_hash(root, slug)})
+    return 0, "\n".join(lines)
+
+
+def cmd_where(root):
+    return 0, where_text(root, compute(root))
+
+
+GOAL_Q_EN = (re.compile(r"(?<![a-z])yes(?![a-z])", re.I), re.compile(r"not\s+yet", re.I))
+GOAL_Q_JA = ("はい", "まだ")
+
+
+def goal_question_in(text):
+    """The reply put the goal question to the user: it names both answers (yes and not yet, 「はい」 and 「まだ」)."""
+    if not isinstance(text, str) or not text.strip():
+        return False
+    return all(rx.search(text) for rx in GOAL_Q_EN) or all(w in text for w in GOAL_Q_JA)
+
+
+def goal_put(root, slug, sess):
+    """The goal question was put to the user in this session, for the design as it is now."""
+    put = sess.get("goal_put")
+    return isinstance(put, dict) and put.get("slug") == slug and put.get("hash") == design_hash(root, slug)
+
+
+def goal_ask_note(root, slug, rl):
+    """The line that tells the model to ask the fixed goal question once, word for word."""
+    what = parse_project(root, slug).get("what")
+    return T("note.goal_ask", question=t_in(rl, "goal.q", what=what if filled(what) else t_in(rl, "goal.what_default")))
+
+
+def goal_turn(root, c, prompt, pend, n, rl, sess, new_request, lost=False):
+    """The goal answer at the end (stage DONE). Returns (recorded, notes). Only the user's own message is recorded, and only:
+    - a plain yes or a plain not yet, when the reply before it put the question to the user (the Stop hook saw both answers named
+      in that reply; see goal_open_at_stop). The latest answer wins, so a mistaken answer can be changed the same way;
+    - "it's finished now" after an earlier not yet, and "not yet" / "it is not finished" after an earlier yes.
+    A yes with no question before it is never recorded. The model is told to ask the question word for word at most once in a
+    session, not on top of a new request, and again when the user says the app is finished or answers a question that was not put."""
+    slug = c["slug"]
+    if lost:
+        return False, []
+    h = design_hash(root, slug)
+    state = goal_state(root, slug)
+    ans = None
+    if isinstance(pend, dict) and pend.get("slug") == slug and pend.get("hash") == h and pend.get("n") == n - 1:
+        ans = True if is_goal_yes(prompt) else (False if is_goal_no(prompt) else None)
+    if ans is None and state is False and says_finished(prompt):
+        ans = True
+    if ans is None and state is True and (is_goal_no(prompt, strict=True) or says_unfinished(prompt)):
+        ans = False
+    if ans is not None:
+        save_rec(root, "goal_%s.json" % slug, {"reached": ans, "hash": h, "quote": prompt.strip()[:60], "prompt": n}, slug)
+        return True, [T("note.goal_yes" if ans else "note.goal_no")]
+    asked = sess.get("goal_asked")
+    asked_now = isinstance(asked, dict) and asked.get("slug") == slug and asked.get("hash") == h
+    if ((state is None and not asked_now and not new_request) or (state is not True and says_finished(prompt))
+            or (state is not True and is_goal_yes(prompt))):
+        set_session(root, goal_asked={"slug": slug, "hash": h})
+        return False, [goal_ask_note(root, slug, rl)]
+    return False, []
+
+
+def goal_open_at_stop(root, c, sess, text):
+    """A reply that ends at DONE and puts the goal question to the user (it names both answers) opens the question for the user's very
+    next message. Nothing else opens it: a yes to any other reply is not a goal answer."""
+    slug = c.get("slug")
+    if slug and c.get("stage") == "DONE" and goal_question_in(text):
+        h = design_hash(root, slug)
+        set_session(root, goal_pending={"slug": slug, "hash": h, "n": int(sess.get("prompts", 0))}, goal_put={"slug": slug, "hash": h})
+
+
 # ---------- hook の本体 ----------
 def norm_input(s):
     """NFKC, ’ -> ', and no trailing punctuation or spaces."""
@@ -1686,6 +2162,66 @@ def is_confirm_yes(prompt):
     return bool(YES_JA.match(s) or YES_EN.match(re.sub(r"\s+", " ", s.lower())))
 
 
+def is_lost(prompt):
+    """A short message that only says the user does not know what to do ("help", "what now?", 「迷った」). The lists are in
+    ws/lang/synonyms.py. A filler word around it ("ok, help", "help please") or a polite Japanese ending (ですか) is ignored.
+    A longer sentence that merely contains one of the words is not a lost message."""
+    s = norm_input(prompt)
+    if not s or not within_limit(s):
+        return False
+    low = re.sub(r"\s+", " ", s.lower()).replace("'", "")  # im lost / i'm lost / whats next
+    if low in SYN.LOST_EN or en_core(low) in SYN.LOST_EN:
+        return True
+    j = re.sub(r"\s+", "", s)
+    if j in SYN.LOST_JA:
+        return True
+    for _ in range(2):  # polite endings: 助けてください, 困っています, どうすればいいですか, 何をすればいいの
+        j2 = re.sub(r"(ですか|でしょうか|ください|ています|ました|です|の|か)$", "", j)
+        if j2 == j:
+            break
+        j = j2
+        if j in SYN.LOST_JA:
+            return True
+    return False
+
+
+def is_goal_no(prompt, strict=False):
+    """A short, plain "not yet" (or "no"). Used only for the answer to the goal question at the end.
+    strict: only the words that cannot be an answer to another question ("not yet", 「まだ」), for taking back an earlier yes."""
+    s = norm_input(prompt)
+    if not s or len(s) > 30:
+        return False
+    en, ja = (SYN.GOAL_NOT_YET_EN, SYN.GOAL_NOT_YET_JA) if strict else (SYN.GOAL_NO_EN, SYN.GOAL_NO_JA)
+    return re.sub(r"\s+", " ", s.lower()) in en or re.sub(r"\s+", "", s) in ja
+
+
+def is_goal_yes(prompt):
+    """A short, plain yes to the goal question. A narrow list: "yes please" or 「お願いします」 answer some other question."""
+    s = norm_input(prompt)
+    if not s or len(s) > 30:
+        return False
+    return re.sub(r"\s+", " ", s.lower()) in SYN.GOAL_YES_EN or re.sub(r"\s+", "", s) in SYN.GOAL_YES_JA
+
+
+def says_unfinished(prompt):
+    """A short message in which the user says the app is not finished, or is not what they wanted."""
+    s = norm_input(prompt)
+    if not s or len(s) > 60:
+        return False
+    low = s.lower()
+    if UNMET_EN.search(low) or UNMET_JA.search(s):
+        return True
+    return within_limit(s) and negative_text(s) and bool(FINISHED_EN.search(low) or FINISHED_JA.search(s))
+
+
+def says_finished(prompt):
+    """A short message in which the user says the app is finished ("it's done", 「完成した」)."""
+    s = norm_input(prompt)
+    if not s or not within_limit(s) or negative_text(s):
+        return False
+    return bool(FINISHED_EN.search(s.lower()) or FINISHED_JA.search(s))
+
+
 # ---------- triage: a new requirement must reach the task board ----------
 TRIAGE_STAGES = ("RS", "RUN", "DONE")  # after the approval. Before it, the answers go into PROJECT.md and the design
 SOFT_STAGES = ("R1", "R2", "R3", "R4", "R4A")
@@ -1694,6 +2230,14 @@ ACK_JA = re.compile(r"します|ます|です|ください|ございます|続�
 NUMS_ONLY = re.compile(r"^[\d\s,、，.\-~〜～・と]+((all )?(pass|passed|ok|okay)|合格|オーケー)?[\s.。!！]*$")
 ALL_PASS = re.compile(r"^(all|全部|全て|すべて)\s*(pass|passed|ok|okay|合格)?[\s.。!！]*$")
 CONTINUE_RE = re.compile(r"^(continue|resume|go on|carry on|keep going|new|続き|つづき|続けて|続行|再開|新規|新しく)[\s.。!！?？]*$")
+
+
+GO_ON_RE = re.compile(r"^(continue|resume|go on|carry on|keep going|続き|つづき|続けて|続行|再開)$")
+
+
+def is_go_on(prompt):
+    """The user only says: go on ("continue", 「続けて」)."""
+    return bool(GO_ON_RE.match(norm_input(prompt).lower()))
 
 
 def bare_ack(prompt):
@@ -1706,14 +2250,16 @@ def bare_ack(prompt):
 
 
 def trivial_prompt(prompt):
-    """A message that cannot add a requirement, a problem, a to-do or a date: an approval, a plain yes, check numbers, or continue / new."""
+    """A message that cannot add a requirement, a problem, a to-do or a date: an approval, a plain yes, check numbers, continue / new,
+    or the user saying they are lost."""
     s = norm_input(prompt)
     if not s:
         return True
-    if is_confirm(prompt) or is_approve(prompt) or is_publish(prompt) or is_confirm_yes(prompt) or bare_ack(prompt):
+    if (is_confirm(prompt) or is_approve(prompt) or is_publish(prompt) or is_confirm_yes(prompt) or bare_ack(prompt) or is_lost(prompt)
+            or is_finish(prompt)):
         return True
     low = s.lower()
-    return bool(NUMS_ONLY.match(low) or ALL_PASS.match(low) or CONTINUE_RE.match(low))
+    return bool(NUMS_ONLY.match(low) or ALL_PASS.match(low) or CONTINUE_RE.match(low) or check_answer_only(prompt))
 
 
 def triage_pending(root, c, sess=None):
@@ -1729,7 +2275,7 @@ def ws_sub(cmd):
     return cmd[m.end():].split() if m else []
 
 
-TRIAGE_WS_OK = {"task", "tasks", "status", "list", "doctor", "version", "lint", "learn", "open", "lang", "select", "new"}
+TRIAGE_WS_OK = {"task", "tasks", "status", "list", "doctor", "version", "lint", "learn", "open", "lang", "select", "new", "next", "where", "guide", "try"}
 
 
 def triage_ws_ok(cmd):
@@ -1770,12 +2316,16 @@ def on_session_start(root, event):
     src = event.get("source", "startup")
     if src in ("startup", "clear"):  # a new conversation. resume and compact keep the counters (D1 and C1 depend on them)
         set_session(root, prompts=0, last_prompt="", started_at=time.time(), auto_selected=False, numbered={}, st_list_at=-99,
-                    prompt_used_for_mark=0, pending_confirm=None)
+                    prompt_used_for_mark=0, pending_confirm=None, goal_pending=None, goal_asked=None, goal_put=None, next_blocked=0, wait_blocked=0,
+                    lost=0, turn="you")
         set_state(root, active=None)
+    elif get_session(root).get("turn") != "you":
+        set_session(root, turn="you")  # resume / compact: no reply is running now (also after an interrupt, where no Stop came)
     cont = auto_select(root) if src in ("startup", "clear", "resume") else None
     c = compute(root)
     c["warn"] = []  # a signature problem is reported once, in the problem lines below, with a way to go on
     parts = ["Reply in: " + reply_lang(root), stage_text(c), place_line(root), project_list_text(root), round_rule(root, c)]
+    parts += [x for x in (next_context(root, c), guide_note(root)) if x]  # the one next step, and the guide page (written here too)
     if cont:
         parts.append(continuing_note(root, cont))
     board = task_session_block(root, c, skip_active=bool(cont))
@@ -1807,7 +2357,12 @@ def on_prompt(root, event):
     rl = lang.detect(prompt, default=sess.get("reply_lang") or get_lang(root))
     extra = {"started_at": time.time()} if not sess.get("started_at") else {}
     pend = sess.get("pending_confirm") if isinstance(sess.get("pending_confirm"), dict) else None  # the approval question asked in the last turn
-    set_session(root, prompts=n, last_prompt=prompt, reply_lang=rl, pending_confirm=None, triage=None, **extra)  # both live for one turn only
+    gpend = sess.get("goal_pending") if isinstance(sess.get("goal_pending"), dict) else None  # the goal question left open by the last turn
+    lost = is_lost(prompt)  # "help", "what now?": never an approval, never a task; the reply is the recap (where_text)
+    if lost:
+        extra["lost"] = int(sess.get("lost", 0)) + 1
+    # pending_confirm, triage and goal_pending live for one turn only. turn: the guide page shows that Claude is working.
+    set_session(root, prompts=n, last_prompt=prompt, reply_lang=rl, pending_confirm=None, triage=None, goal_pending=None, turn="claude", **extra)
     cont = auto_select(root) if n == 1 else None
     if n == 1 and not cont and sess.get("auto_selected") and get_state(root).get("active"):
         cont = parse_project(root, get_state(root)["active"]).get("name", get_state(root)["active"])
@@ -1838,6 +2393,16 @@ def on_prompt(root, event):
             notes.append(T("note.recorded.via_confirm"))
             recorded = True
             c = compute(root)
+    if not recorded and slug and c["stage"] == "RUN" and is_finish(prompt):
+        # "finish": the user's own word ends the build stage as it is. Only here, only from the prompt text, bound to the design.
+        if accept_ready(root, slug):
+            save_rec(root, "accept_%s.json" % slug, {"hash": design_hash(root, slug), "quote": prompt.strip()[:60], "prompt": n}, slug)
+            c = compute(root)
+            notes.append(T("note.recorded.accept") + ((" " + accept_line(c)) if accept_line(c) else ""))
+        else:
+            sm = st_summary(root, slug) or {"user_pass": 0, "user_total": 0}
+            notes.append(T("note.accept_needs", p=sm["user_pass"], t=sm["user_total"]))
+        recorded = True
     pub_ready = False
     if slug:
         chk = load_rec(root, "publish_check_%s.json" % slug, slug, {}) or {}
@@ -1852,8 +2417,17 @@ def on_prompt(root, event):
             else:
                 notes.append(T("note.publish_needs_check"))
                 recorded = True
+    triage = bool(slug) and c["stage"] in TRIAGE_STAGES and not trivial_prompt(prompt)
+    if slug and c["stage"] == "DONE" and not recorded:
+        try:  # the goal question at the end: a plain yes / not yet to the open question is recorded (the user's own words only)
+            goal_done, goal_notes = goal_turn(root, c, prompt, gpend, n, rl, sess, triage, lost)
+        except Exception:
+            goal_done, goal_notes = False, []
+        notes += goal_notes
+        if goal_done:
+            recorded, triage = True, False  # the answer itself adds nothing to the task board
     asked = False
-    if not recorded and slug and short_affirm(prompt):
+    if not recorded and not lost and slug and short_affirm(prompt):
         kind = CONFIRM_KIND.get(c["stage"])
         if kind and not is_confirm_yes(prompt):
             # a natural reply (not the exact word): do not record it. Save what the approval would bind to, and have the AI ask one fixed question.
@@ -1864,7 +2438,7 @@ def on_prompt(root, event):
             notes.append(not_recorded_note("word.r3"))
         elif c["stage"] == "R4A":
             notes.append(not_recorded_note("word.r4a"))
-        elif pub_ready:
+        elif pub_ready and not is_go_on(prompt):
             notes.append(not_recorded_note("word.publish"))  # publish has no two-step: only the exact word records it
     if pend and not recorded and not asked:
         notes.append(T("note.confirm_cleared"))  # the next message was not a plain yes: nothing is recorded
@@ -1877,14 +2451,32 @@ def on_prompt(root, event):
     rl2 = repo_line(root, slug)
     if rl2:
         needs = (needs + "\n" + rl2) if needs else rl2
-    triage = bool(slug) and c["stage"] in TRIAGE_STAGES and not trivial_prompt(prompt)
     if triage:
         set_session(root, triage={"n": n, "quote": " ".join(prompt.split())[:60]})
     soft = bool(slug) and c["stage"] in SOFT_STAGES and not trivial_prompt(prompt)
     digest = task_prompt_digest(root, c, triage, soft)
     warn = board_warn(root)  # after the approval records above: the stage on the page may have changed
     upd = update_note(root, at_start=False)
-    return "\n".join(x for x in ["Reply in: " + rl, stage_text(c), round_rule(root, c), needs, first] + notes + [digest, warn, upd] if x)
+    if lost:
+        try:
+            notes.append(T("note.lost") + "\n" + where_text(root, c))
+        except Exception:
+            pass
+    try:
+        if slug and c["stage"] == "R3" and design_is_grey(root, slug):
+            notes.append(T("note.grey_design"))  # the design the user agrees to is the finished look: a note, never a block
+    except Exception:
+        pass
+    try:
+        if slug and is_go_on(prompt):  # "continue" after Claude stopped: say whose move the unfinished step is
+            base = next_base(root, c, get_session(root))
+            if base["kind"] == "wait":
+                notes.append(T("note.go_on", next=base["text"]))
+    except Exception:
+        pass
+    nxt = next_context(root, c)  # after the records above, so it is the step for the state as it is now
+    gnote = guide_note(root)  # the guide page follows every prompt (turn: claude)
+    return "\n".join(x for x in ["Reply in: " + rl, stage_text(c), round_rule(root, c), nxt, needs, first] + notes + [gnote, digest, warn, upd] if x)
 
 
 def _msg_text(m):
@@ -1930,19 +2522,52 @@ def last_assistant_text(event):
     return None
 
 
-def on_stop(root, event):
+def stop_reasons(root, event):
+    """Why the reply may not end yet (a list of texts; empty means it may end)."""
     if event.get("stop_hook_active"):
-        return None
+        return []
     c = compute(root)
-    if c["stage"] == "R0" and len(list_projects(root)) >= 1 and int(get_session(root).get("prompts", 0)) >= 1:
-        txt = last_assistant_text(event)
-        if txt is None or re.search(r"\b(continu\w*|new)\b|続き|新規", txt, re.I):
-            return None
-        return T("stop.ask")
     sess = get_session(root)
-    if triage_pending(root, c, sess) and not sess["triage"].get("blocked"):
+    n = int(sess.get("prompts", 0))
+    why = []
+    if c["stage"] == "R0" and len(list_projects(root)) >= 1 and n >= 1:
+        txt = last_assistant_text(event)
+        if txt is not None and not re.search(r"\b(continu\w*|new)\b|続き|新規", txt, re.I):
+            why.append(T("stop.ask"))
+    elif triage_pending(root, c, sess) and not sess["triage"].get("blocked"):
         set_session(root, triage=dict(sess["triage"], blocked=True))  # block once: the second Stop passes even if the board was not touched
-        return T("stop.triage")
+        why.append(T("stop.triage"))
+    working = dict(sess, turn="claude")  # the step as it is while this turn runs
+    ns = next_step(root, c, working)
+    # The missing thing is Claude's own work, and Claude is about to stop: go on, once for each user message. Not in the first turn of
+    # a session at the build stage (it is read-only there). The text also gives the line to end with if Claude truly cannot go on.
+    if n >= 1 and ns["kind"] == "wait" and sess.get("wait_blocked") != n and not (c["stage"] == "RUN" and n <= 1):
+        set_session(root, wait_blocked=n, next_blocked=n)  # this text asks for the last line too: no second block for it
+        after = next_step(root, c, dict(sess, turn="you"))
+        why.append(T("stop.wait", next=ns["text"], after=next_inline(after)))
+        return why
+    # The reply must end with the next-step line. Checked once for each user message, and only when the reply can be read.
+    if n >= 1 and sess.get("next_blocked") != n:
+        txt = last_assistant_text(event)
+        if txt is not None and not NEXT_MARK.search(txt):
+            set_session(root, next_blocked=n)
+            why.append(T("stop.next", next=next_inline(next_step(root, c, dict(sess, turn="you")) if ns["kind"] == "wait" else ns)))
+    return why
+
+
+def on_stop(root, event):
+    """A text when the reply may not end yet, else None. When it ends: it is the user's turn, and the guide page says so."""
+    why = stop_reasons(root, event)
+    if why:
+        return "\n".join(why)
+    try:
+        sess = get_session(root)
+        if sess.get("turn") != "you":
+            set_session(root, turn="you")
+        goal_open_at_stop(root, compute(root), sess, last_assistant_text(event))
+        refresh_guide(root)
+    except Exception:  # the Stop hook is fail-open: the page is a help, never a reason to hold a reply
+        pass
     return None
 
 
@@ -2617,9 +3242,11 @@ def st_save(root, slug, d):
 
 
 def case_who(io_row, kind):
-    """F3: who can check it. scheduled, a failure of external, a failure of api -> ai (can't be triggered by hand). Else the user."""
+    """Who checks a new case. The user checks what they asked for, once each: the normal case (N) of a row that a person can trigger.
+    Every empty or edge case (B) and every failure case (F) is Claude's, and so is every case of a scheduled row (it cannot be
+    triggered by hand). A list that exists keeps the `who` it has (KEEP_KEYS)."""
     k = SYN.kind_symbol(str(io_row.get("kind", "")))
-    if k == "scheduled" or (kind == "F" and k in ("external", "api")):
+    if kind != "N" or k == "scheduled":
         return "ai"
     return "user"
 
@@ -2736,52 +3363,164 @@ def id_token(text, cid):
 
 
 def parse_numbers(text):
-    """'1, 2 pass' / '1-3 pass' / '1 2' -> {1, 2, 3}. Only small numbers."""
+    """'1, 2 pass' / '1-3 pass' / '1 to 3' / 「1から3」 -> {1, 2, 3}. Only small numbers."""
     nums = set()
-    for a, b in re.findall(r"(?<![0-9A-Za-z.\-])(\d{1,3})\s*[-~〜～]\s*(\d{1,3})(?![0-9A-Za-z])", text):
-        lo, hi = int(a), int(b)
-        if lo <= hi <= lo + 200:
-            nums.update(range(lo, hi + 1))
-    text2 = re.sub(r"(?<![0-9A-Za-z.\-])(\d{1,3})\s*[-~〜～]\s*(\d{1,3})(?![0-9A-Za-z])", " ", text)
-    for a in re.findall(r"(?<![0-9A-Za-z.\-])(\d{1,3})(?![0-9A-Za-z.])", text2):
-        nums.add(int(a))
+    for m in NUM_TOKEN.finditer(nfkc(text).lower()):
+        lo = int(m.group(1))
+        hi = int(m.group(2)) if m.group(2) else lo
+        nums.update(range(lo, hi + 1) if lo <= hi <= lo + 200 else (lo,))
     return nums
 
 
 PASS_WORD = re.compile(r"(?<![a-z])(pass|passed)(?![a-z])")
+# ---- reading the user's answer to the numbered list ("1, 2 and 4 worked; 3 did not", 「1から7まで全部できました」) ----
+# A number is recorded as passed only when a positive word clearly belongs to it. A number with a negative word, or with neither,
+# is not recorded, and the reply names it. When in doubt, nothing is recorded.
+NUM_TOKEN = re.compile(r"(?<![0-9a-z.\-])(\d{1,3})(?:(?:\s*番)?\s*(?:[-~〜～–—]|to|through|から)\s*(\d{1,3}))?(?![0-9a-z.])")
+ALL_ANS = re.compile(r"(?<![a-z'])(all|everything|every one|each one)(?![a-z'])|全部|全て|すべて|ぜんぶ|どれも")
+EXCEPT_PRE = re.compile(r"(?<![a-z'])(but|except for|except|other than|apart from|excluding)(?![a-z'])")
+EXCEPT_POST = re.compile(r"以外|を除いて|除いて|をのぞいて|のぞいて")
+NEG_ANS = re.compile(r"(?<![a-z'])(not|no|didn'?t|doesn'?t|don'?t|couldn'?t|can'?t|cannot|isn'?t|wasn'?t|won'?t|never|nothing|fail|fails|failed|failing"
+                     r"|broken|wrong|bad|error|errors|crash\w*|stuck)(?![a-z'])"
+                     r"|だめ|ダメ|駄目|失敗|ません|ない|なかっ|されな|エラー|おかしい|無理|違う|不合格|×|✗|✕")
+POS_ANS = re.compile(r"(?<![a-z'])(no problems?|all good|work(?:s|ed|ing)? fine|worked|works|work|working|pass|passed|passes|ok|okay|good|fine|yes|done|great)(?![a-z'])"
+                     r"|できた|できました|出来た|出来ました|動いた|動きました|うまくいった|うまくいきました|大丈夫|合格|問題ない|問題なし|問題なかった|問題ありません|オーケー")
+ANS_FILLER = re.compile(r"(?<![a-z'])(and|the|numbers?|no\.|checks?|cases?|they|it|is|are|was|were|did|does|do|i|for|me|with|of|them|ones?|just|too|also|now|only)(?![a-z'])"
+                        r"|番|まで|から|は|と|も|が|の|で|です|でした|ました|だけ|けど|、")
+
+
+def _ans_tokens(sentence):
+    """The words of one sentence that matter, in order: numbers, positive, negative, all, except. Where two overlap, the earlier and
+    longer one wins (「問題ない」 is positive, 「不合格」 is negative)."""
+    found = []
+    for kind, rx in (("n", NUM_TOKEN), ("+", POS_ANS), ("-", NEG_ANS), ("a", ALL_ANS), ("x", EXCEPT_PRE), ("y", EXCEPT_POST)):
+        found += [(m.start(), -(m.end() - m.start()), m.end(), kind, m) for m in rx.finditer(sentence)]
+    out, end = [], -1
+    for start, _, stop, kind, m in sorted(found, key=lambda f: (f[0], f[1])):
+        if start >= end:
+            out.append((kind, m))
+            end = stop
+    return out
+
+
+def read_answer(text):
+    """{"passed", "failed", "other", "bulk"} for the user's answer to the numbered list.
+    passed: numbers that a positive word belongs to. failed: numbers a negative word belongs to. other: numbers named with neither,
+    or set apart ("all but 3", 「3以外は全部できた」). bulk: the message says that all of them worked (the caller turns that into the
+    whole list, minus failed and other). Only the part before a colon counts in a sentence, so a number inside an explanation
+    ("1 passed: I added 3 coffees") is not a case number."""
+    low = nfkc(text).replace("’", "'").lower()
+    passed, failed, other, bulk = set(), set(), set(), False
+    for sentence in re.split(r"[;。!?！？\n]+|\.(?!\d)", low):
+        head = re.split(r"[:：]", sentence, 1)[0]
+        if not NUM_TOKEN.search(head) and not ALL_ANS.search(head):
+            head = sentence  # "Results: 1 and 2 worked" (the list comes after the colon)
+        toks = _ans_tokens(head)
+        has_all = any(k == "a" for k, _ in toks)
+        pending, apart, neg_next, set_apart = set(), set(), False, False
+        for kind, m in toks:
+            if kind == "n":
+                lo = int(m.group(1))
+                hi = int(m.group(2)) if m.group(2) else lo
+                nums = set(range(lo, hi + 1)) if lo <= hi <= lo + 200 else {lo}
+                if neg_next:
+                    failed |= nums
+                elif set_apart and has_all:
+                    apart |= nums  # "all but 3": 3 is not among the ones that worked (failed only if a word says so)
+                else:
+                    pending |= nums
+            elif kind == "+":
+                if pending:
+                    passed |= pending
+                elif has_all and not neg_next:
+                    bulk = True
+                other |= apart
+                pending, apart, neg_next, set_apart = set(), set(), False, False
+            elif kind == "-":
+                if pending:
+                    failed |= pending
+                    pending = set()
+                elif apart:
+                    failed |= apart  # "all pass but 3 failed"
+                    apart = set()
+                else:
+                    neg_next = True
+                set_apart = False
+            elif kind == "x":
+                set_apart = True
+            elif kind == "y":
+                other |= pending  # 「3以外」: 3 is set apart
+                pending = set()
+        other |= pending | apart  # named, with no word that says whether it worked
+    passed -= failed
+    return {"passed": passed, "failed": failed, "other": other - passed - failed, "bulk": bulk}
+
+
+def answer_for(sess):
+    """The user's latest message as an answer to the last numbered list: ({number: id} passed, failed, other).
+    Only numbers of that list count. "All worked" counts only soon after the list was shown (3 messages)."""
+    mapping = {int(k): v for k, v in (sess.get("numbered") or {}).items() if str(k).isdigit()}
+    ans = read_answer(sess.get("last_prompt", ""))
+    listed = set(mapping)
+    failed = ans["failed"] & listed
+    other = (ans["other"] & listed) - failed
+    passed = (ans["passed"] & listed) - failed
+    if ans["bulk"] and int(sess.get("prompts", 0)) - int(sess.get("st_list_at", -99)) <= 3:
+        passed |= listed - failed - other
+    other -= passed
+    pick = lambda nums: {k: mapping[k] for k in sorted(nums)}
+    return pick(passed), pick(failed), pick(other)
+
+
+def bulk_pass(sess):
+    """The user's latest message says that all of them worked, with nothing taken back, soon after a list was shown."""
+    ans = read_answer(sess.get("last_prompt", ""))
+    return (ans["bulk"] and not ans["failed"] and not ans["other"]
+            and int(sess.get("prompts", 0)) - int(sess.get("st_list_at", -99)) <= 3)
+
+
+def check_answer_only(prompt):
+    """The message is only a good answer to the numbered checks ("1, 2 and 4 worked", 「1から7まで全部できた」): numbers and the words
+    that say they worked, and nothing else. Such a message adds nothing to the task board. An answer that says something failed
+    ("3 did not") is a problem, so it is still sorted onto the board."""
+    low = nfkc(prompt).replace("’", "'").lower()
+    toks = _ans_tokens(low)
+    if (len(low) > 80 or not any(k in "na" for k, _ in toks) or not any(k == "+" for k, _ in toks)
+            or any(k in "-xy" for k, _ in toks)):
+        return False
+    for rx in (NUM_TOKEN, POS_ANS, ALL_ANS, ANS_FILLER):
+        low = rx.sub(" ", low)
+    return not re.search(r"[a-z0-9぀-ヿ㐀-鿿]", low)
 
 
 def user_mark_ok(root, row, numbers_mode=False):
-    """F1: the user's own latest input must name the case (ID suffix or list number) and say pass or say 10+ other characters.
-    One input is good for one mark (used up), except numbered answers (each listed number) and a bulk 'all pass' after a list.
-    Returns (ok, extra_fields, message)."""
+    """F1: the user's own latest input must name the case and say that it passed.
+    By ID (the end of the ID is enough): the word pass / passed / 合格, or 10+ other characters about what they saw, and no word that
+    says it failed. One input is good for one such mark (used up).
+    By number (after `st list --numbered`): a positive word must belong to the number (read_answer). "All worked" soon after a list
+    covers the listed cases. Returns (ok, extra_fields, message)."""
     sess = get_session(root)
     last = nfkc(sess.get("last_prompt", ""))
     low = last.lower()
     n = int(sess.get("prompts", 0))
-    pass_word = bool(PASS_WORD.search(low)) or "合格" in last
-    bulk_word = bool(re.search(r"(?<![a-z])all(?![a-z])", low)) or any(w in last for w in ("全部", "全て", "すべて"))
-    if bulk_word and pass_word and n - int(sess.get("st_list_at", -99)) <= 3:
-        return True, {"bulk": True}, ""
     token = id_token(last, row["id"])
-    via = None
     if token:
         rest_text = re.sub(r"(?<![A-Za-z0-9])" + re.escape(token) + r"(?![A-Za-z0-9])", " ", last, flags=re.I)
-    else:
-        nums = parse_numbers(last)
-        mapping = sess.get("numbered") or {}
-        mine = [int(k) for k, v in mapping.items() if v == row["id"] and k.isdigit()]
-        if not any(k in nums for k in mine):
-            return False, {}, T("st.user.need_id")
-        via = "numbered"
-        rest_text = re.sub(r"\d{1,3}(\s*[-~〜～]\s*\d{1,3})?", " ", last)
-    if via != "numbered" and int(sess.get("prompt_used_for_mark", 0)) == n:
-        return False, {}, T("st.user.used")
-    if not (pass_word or len(re.sub(r"\s+", "", rest_text)) >= 10):
-        return False, {}, T("st.user.need_words")
-    if via != "numbered":
+        if int(sess.get("prompt_used_for_mark", 0)) == n:
+            return False, {}, T("st.user.used")
+        said_no = any(k == "-" for k, _ in _ans_tokens(rest_text.lower()))
+        if said_no or not (PASS_WORD.search(low) or "合格" in last or len(re.sub(r"\s+", "", rest_text)) >= 10):
+            return False, {}, T("st.user.need_words")
         set_session(root, prompt_used_for_mark=n)
-    return True, ({"via": "numbered"} if via else {}), ""
+        return True, {}, ""
+    passed, failed, other = answer_for(sess)
+    if row["id"] in passed.values():
+        return True, ({"bulk": True} if read_answer(last)["bulk"] and not read_answer(last)["passed"] else {"via": "numbered"}), ""
+    if row["id"] in failed.values() or row["id"] in other.values():
+        return False, {}, T("st.user.need_words")
+    if bulk_pass(sess) and row["id"] not in (sess.get("numbered") or {}).values():
+        return True, {"bulk": True}, ""  # "all pass" for a case named by its ID outside the numbered list
+    return False, {}, T("st.user.need_id")
 
 
 def detect_runner(src):
@@ -2864,7 +3603,9 @@ def cmd_st(root, rest):
     if sub == "list":
         numbered = "--numbered" in rest
         out, mapping = [], {}
-        for i, r in enumerate(d["rows"], 1):
+        # the numbered list is the one the user answers: only the cases the user checks, so the numbers are few and start at 1
+        shown = [r for r in d["rows"] if r.get("who", "user") != "ai"] if numbered else d["rows"]
+        for i, r in enumerate(shown, 1):
             mapping[str(i)] = r["id"]
             stt = T("st.status." + r["status"]) if r["status"] in ("pass", "fail", "todo") else r["status"]
             parts = dict(status=stt, id=r["id"], who=r.get("who", "user"), kind=r["kind"], state=state_label(r["state"]), what=r["what"], expected=r["expected"])
@@ -2874,8 +3615,14 @@ def cmd_st(root, rest):
         sm = st_summary(root, slug)
         out.append(T("st.list.counts", p=sm["pass"], t=sm["total"], f=sm["fail"], ab=sm["abnormal"]))
         out.append(T("st.list.summary", u=sm["user_pass"], ut=sm["user_total"], a=sm["ai_pass"], at=sm["ai_total"]))
+        if numbered and sm["ai_total"]:
+            out.append(T("st.list.claude", n=sm["ai_total"], p=sm["ai_pass"]))
         if sm["abnormal"] * 2 < sm["total"]:
             out.append(T("st.list.warn"))
+        if c["stage"] == "DONE":
+            if accept_line(c):
+                out.append(accept_line(c))
+            out.append(goal_line(root, slug))  # what the user answered to "does it do what you wanted?"
         return 0, "\n".join(out)
     if sub == "route" and len(rest) >= 3:
         row = next((r for r in d["rows"] if r["id"] == rest[1]), None)
@@ -2892,9 +3639,7 @@ def cmd_st(root, rest):
         row["who"], row["who_reason"] = who, reason
         st_save(root, slug, d)
         return 0, T("st.route.done", id=row["id"], who=who)
-    if sub == "run":
-        if c["stage"] == "DONE":
-            return 2, T("common.done_already")
+    if sub == "run":  # also at DONE: only Claude's own cases can be run (st_run refuses a case the user checks)
         ids = []
         i = 1
         while i < len(rest) and not rest[i].startswith("--"):
@@ -2906,7 +3651,10 @@ def cmd_st(root, rest):
         return st_run(root, slug, ids, int(tv) if tv and tv.isdigit() else 600)
     if sub == "mark" and len(rest) >= 3:
         if c["stage"] == "DONE":
-            return 2, T("common.done_already")
+            # the user's checks are closed. Claude's own cases stay open: a newer result (after a fix) replaces the old one.
+            row0 = next((r for r in d["rows"] if r["id"] == rest[1]), None)
+            if (opt("--by") or "") != "ai" or row0 is None or row0.get("who", "user") != "ai" or rest[2] not in ("pass", "fail"):
+                return 2, T("st.done_only_ai")
         status = rest[2]
         if status not in ("pass", "fail", "todo"):
             return 2, T("st.bad_status")
@@ -2916,11 +3664,13 @@ def cmd_st(root, rest):
         evidence = (read_arg_text(rest, "--evidence") or "").strip()
         if rest[1] == "numbered":
             sess = get_session(root)
-            nums = parse_numbers(nfkc(sess.get("last_prompt", "")))
-            mapping = sess.get("numbered") or {}
-            targets = [mapping[str(k)] for k in sorted(nums) if str(k) in mapping]
+            passed, said_no, unclear = answer_for(sess)  # {number: id}: only what the message clearly says, for the last numbered list
+            targets = list(passed.values())
+            failed_note = "\n".join(x for x in (
+                T("st.numbered.failed", ids=", ".join("%d (%s)" % kv for kv in said_no.items())) if said_no else "",
+                T("st.numbered.unclear", ids=", ".join("%d (%s)" % kv for kv in unclear.items())) if unclear else "") if x)
             if status != "pass" or by != "user" or not targets:
-                return 2, T("st.numbered.usage")
+                return (1, failed_note) if failed_note and status == "pass" and by == "user" else (2, T("st.numbered.usage"))
             done_ids = []
             for tid in targets:
                 row = next((r for r in d["rows"] if r["id"] == tid), None)
@@ -2932,7 +3682,7 @@ def cmd_st(root, rest):
                 done_ids.append(tid)
             st_save(root, slug, d)
             sm = st_summary(root, slug)
-            return 0, T("st.recorded", ids=", ".join(done_ids), p=sm["pass"], t=sm["total"])
+            return 0, T("st.recorded", ids=", ".join(done_ids), p=sm["pass"], t=sm["total"]) + ("\n" + failed_note if failed_note else "")
         row = next((r for r in d["rows"] if r["id"] == rest[1]), None)
         if row is None:
             return 2, T("st.no_case", id=rest[1])
@@ -3004,21 +3754,37 @@ def cmd_lint(root):
 CJK_FONTS = {"ja": '"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",'}
 
 
-def _embed(template_path, data, page):
-    """Fill a render template: the data, the labels of the current language, <html lang>, and the CJK fonts (ja only)."""
+EMBED_MARKS = re.compile(r'/\*__WS_DATA__\*/null|/\*__WS_LABELS__\*/null|/\*__WS_FONT__\*/|/\*__WS_TOKEN__\*/""|<!--ws-noscript-->[^<]*')
+
+
+def embed_json(obj):
+    """JSON for a page: no `<` (so `</script>` cannot cut it), and no template mark (so a mark typed by the user stays text)."""
+    return json.dumps(obj, ensure_ascii=False).replace("<", "\\u003c").replace("/*__WS_", "/\\u002a__WS_")
+
+
+def _embed(template_path, data, page, token=""):
+    """Fill a render template: the data, the labels of the current language, <html lang>, and the CJK fonts (ja only).
+    The marks are filled in one pass over the template, so text that was filled in is never read as a mark."""
     t = read_text(template_path)
     if t is None:
         return None
     if isinstance(data, dict):
         data = {k: v for k, v in data.items() if k not in ("_sig", "_unsigned")}
-    safe = lambda obj: json.dumps(obj, ensure_ascii=False).replace("<", "\\u003c")
     code = lang.current()
-    t = t.replace("/*__WS_DATA__*/null", safe(data))
-    t = t.replace("/*__WS_LABELS__*/null", safe(lang.labels("html.common.", "html.%s." % page)))
     t = re.sub(r'<html lang="[^"]*">', '<html lang="%s">' % code, t, count=1)
-    t = t.replace("/*__WS_FONT__*/", CJK_FONTS.get(code, ""))
-    t = re.sub(r"<!--ws-noscript-->[^<]*", lambda m: T("html.common.noscript"), t)
-    return t
+
+    def fill(m):
+        mark = m.group(0)
+        if mark.startswith("/*__WS_DATA__"):
+            return embed_json(data)
+        if mark.startswith("/*__WS_LABELS__"):
+            return embed_json(lang.labels("html.common.", "html.%s." % page))
+        if mark.startswith("/*__WS_FONT__"):
+            return CJK_FONTS.get(code, "")
+        if mark.startswith("/*__WS_TOKEN__"):
+            return embed_json(token)
+        return T("html.common.noscript")
+    return EMBED_MARKS.sub(fill, t)
 
 
 def cmd_render(root):
@@ -3901,8 +4667,10 @@ def cmd_rules_import(root, path):
 
 def cmd_open(root, path):
     c = compute(root)
-    board = bool(path) and os.path.realpath(path if os.path.isabs(path) else os.path.join(root, path)) == os.path.realpath(os.path.join(root, GANTT_REL))
-    if not board and (not c["slug"] or c["stage"] == "R0"):  # the schedule page of all projects needs no project
+    # the schedule page of all projects and the guide page need no project
+    board = bool(path) and os.path.realpath(path if os.path.isabs(path) else os.path.join(root, path)) in [
+        os.path.realpath(os.path.join(root, rel)) for rel in (GANTT_REL, GUIDE_REL)]
+    if not board and (not c["slug"] or c["stage"] == "R0"):
         return 2, T("common.need_project")
     if not path:
         return 2, T("open.usage")
@@ -3915,6 +4683,11 @@ def cmd_open(root, path):
         return 1, T("open.bad_type")
     if not os.path.isfile(p):
         return 1, T("open.no_file")
+    return open_file(root, p)
+
+
+def open_file(root, p):
+    """Open a file with the program of the operating system (CREATECODEBOX_OPEN_DRY_RUN=1: only say what would be opened)."""
     if os.environ.get("CREATECODEBOX_OPEN_DRY_RUN") == "1":
         return 0, T("open.would", path=rel_in_root(root, p) or p)
     opener = {"darwin": ["open"], "win32": ["cmd", "/c", "start", ""]}.get(sys.platform, ["xdg-open"])
@@ -3923,6 +4696,221 @@ def cmd_open(root, path):
     except OSError:
         return 1, T("open.failed", path=p)
     return 0, T("open.done", path=rel_in_root(root, p) or p)
+
+
+# ---------- try: run a page of the project in a browser without a window, and say what came out ----------
+# For Claude: the evidence of a build row, and its own cases (empty state, failure, a fixed date). No extra tool is needed and
+# nothing is installed: a Chromium-family browser that is already on the computer is used, with a new empty profile each time.
+BROWSERS_MAC = ("Google Chrome", "Microsoft Edge", "Chromium", "Brave Browser")
+BROWSERS_WIN = ((("Google", "Chrome", "Application", "chrome.exe"), "Google Chrome"), (("Microsoft", "Edge", "Application", "msedge.exe"), "Microsoft Edge"))
+BROWSERS_PATH = ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge", "brave-browser")
+TRY_HEAD = ("<script>/* ccb-try: console lines and errors */(function(){var L=window.__ccbTryLog=[];"
+            "function s(a){try{return typeof a==='string'?a:JSON.stringify(a)}catch(e){return String(a)}}"
+            "var o=console.log;console.log=function(){L.push(Array.prototype.map.call(arguments,s).join(' '));try{o.apply(console,arguments)}catch(e){}};"
+            "window.addEventListener('error',function(e){L.push('error: '+((e&&e.message)||e))});})();</script>")
+TRY_TAIL = ("<script>/* ccb-try: --after */(function(){function done(o){o.console=window.__ccbTryLog||[];var t;"
+            "try{t=JSON.stringify(o)}catch(e){o.result=String(o.result);t=JSON.stringify(o)}"
+            "var p=document.createElement('pre');p.id='ccb-try-out';p.style.display='none';p.textContent=t;"
+            "(document.body||document.documentElement).appendChild(p);}"
+            "function run(){(async function(){\n%s\n})().then(function(v){done({ok:true,result:v===undefined?null:v});},"
+            "function(e){done({ok:false,error:String((e&&e.stack)||e)});});}"
+            "if(document.readyState==='complete'){run();}else{window.addEventListener('load',run);}})();</script>")
+
+
+def find_browser():
+    """(path, name) of a Chromium-family browser on this computer that can run without a window, or None.
+    CREATECODEBOX_BROWSER (a path) overrides the search. Nothing is installed or downloaded."""
+    env = (os.environ.get("CREATECODEBOX_BROWSER") or "").strip()
+    if env:
+        path = os.path.expanduser(env)
+        return (path, os.path.splitext(os.path.basename(path))[0]) if os.path.isfile(path) else None
+    found = []
+    if sys.platform == "darwin":
+        for base in ("/Applications", os.path.join(os.path.expanduser("~"), "Applications")):
+            found += [(os.path.join(base, n + ".app", "Contents", "MacOS", n), n) for n in BROWSERS_MAC]
+    elif os.name == "nt":
+        for var in ("ProgramFiles", "ProgramFiles(x86)", "LocalAppData"):
+            if os.environ.get(var):
+                found += [(os.path.join(os.environ[var], *parts), n) for parts, n in BROWSERS_WIN]
+    for path, name in found:
+        if os.path.isfile(path):
+            return path, name
+    for exe in BROWSERS_PATH:
+        w = shutil.which(exe)
+        if w:
+            return w, exe
+    return None
+
+
+def try_inject(page, before, after):
+    """The page with the two scripts put in: `before` as the first script in <head> (it runs before the page's own scripts),
+    `after` just before </body> (it runs after `load`; what it returns, an error, and the console lines go into #ccb-try-out)."""
+    safe = lambda code: re.sub(r"(?i)</script", r"<\\/script", code or "")
+    head = TRY_HEAD + ("<script>/* ccb-try: --before */\n%s\n</script>" % safe(before) if before else "")
+    tail = TRY_TAIL % safe(after)
+    m = re.search(r"(?i)<head\b[^>]*>", page) or re.search(r"(?i)<html\b[^>]*>", page) or re.search(r"(?i)^\s*<!doctype[^>]*>", page)
+    page = page[:m.end()] + head + page[m.end():] if m else head + page
+    at = page.lower().rfind("</body")
+    return page[:at] + tail + page[at:] if at >= 0 else page + tail
+
+
+def run_headless(browser, args, url, good, timeout=60):
+    """Run the browser without a window on a new, empty profile: the new headless mode first, the old one if that did not work.
+    `good(rc, out)` says whether a run worked. Returns (rc, stdout bytes) of the last run. The profile folder is removed."""
+    rc, out = 1, b""
+    for mode in ("--headless=new", "--headless"):
+        profile = tempfile.mkdtemp(prefix="ccb-try-")
+        cmd = [browser, mode, "--no-first-run", "--no-default-browser-check", "--disable-gpu", "--hide-scrollbars",
+               "--user-data-dir=" + profile] + args + [url]
+        try:
+            kw = {"creationflags": 0x00000200} if os.name == "nt" else {"start_new_session": True}
+            proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, **kw)
+            try:
+                out, _ = proc.communicate(timeout=timeout)
+                rc = proc.returncode
+            except subprocess.TimeoutExpired:
+                try:
+                    if os.name == "nt":
+                        proc.kill()
+                    else:
+                        os.killpg(proc.pid, 9)  # the browser and its helper processes
+                except OSError:
+                    pass
+                try:
+                    proc.communicate(timeout=5)
+                except (subprocess.SubprocessError, OSError):
+                    pass
+                rc, out = 124, b""
+        except OSError:
+            rc, out = 127, b""
+        finally:
+            shutil.rmtree(profile, ignore_errors=True)
+        if good(rc, out):
+            break
+    return rc, out
+
+
+def page_text(dom, limit=1500):
+    """The words a person would see on the page, from the dumped DOM: no scripts, styles or tags."""
+    import html as htmllib
+    t = re.sub(r"(?is)<(script|style|noscript|template|head)\b.*?</\1\s*>", " ", dom)
+    t = re.sub(r"(?s)<!--.*?-->", " ", t)
+    # an element that the page hides (the `hidden` attribute, or display: none in its own style) is not on the page for a person
+    t = re.sub(r'(?is)<([a-z][a-z0-9]*)\b(?=[^>]*\s(?:hidden(?:=""|=\'\'|(?=[\s>]))|style="[^"]*display:\s*none))[^>]*>.*?</\1\s*>', " ", t)
+    t = re.sub(r"(?i)<(br|/p|/div|/li|/tr|/h[1-6]|/section|/header|/footer|/main|/button|/label|/td|/th)\b[^>]*>", "\n", t)
+    t = htmllib.unescape(re.sub(r"<[^>]+>", " ", t))
+    lines = [re.sub(r"[ \t\r\f\v ]+", " ", x).strip() for x in t.splitlines()]
+    return "\n".join(x for x in lines if x)[:limit]
+
+
+def cmd_try(root, rest):
+    """ws.sh try <page.html> [--before <file.js>] [--after <file.js>] [--shot <out.png>] [--size WxH] [--wait <ms>]"""
+    import html as htmllib
+    import pathlib
+    opts, words, i = {}, [], 0
+    while i < len(rest):
+        if rest[i] in ("--before", "--after", "--shot", "--size", "--wait"):
+            if i + 1 >= len(rest):
+                return 2, T("try.usage")
+            opts[rest[i]] = rest[i + 1]
+            i += 1
+        elif rest[i].startswith("--"):
+            return 2, T("try.usage")
+        else:
+            words.append(rest[i])
+        i += 1
+    if len(words) != 1:
+        return 2, T("try.usage")
+    if any("://" in a for a in rest):
+        return 2, T("try.local_only")
+    c = compute(root)
+    slug, stage = c["slug"], c["stage"]
+    if not slug or stage in ("R0", "R1"):
+        return 2, T("common.need_project")
+    base = os.path.realpath(os.path.join(projects_dir(root), slug))
+    inside = lambda path, sub="": (path + os.sep).startswith(os.path.join(base, sub).rstrip(os.sep) + os.sep)
+    real = lambda path: os.path.realpath(path if os.path.isabs(path) else os.path.join(root, path))
+    page = real(words[0])
+    if not (inside(page, "src") or inside(page, "design")):
+        return 1, T("open.bad_place")
+    if inside(page, "src") and stage not in ("RUN", "DONE"):
+        return 1, T("try.src_stage", label=stage_label(stage))
+    if os.path.splitext(page)[1].lower() not in (".html", ".htm"):
+        return 1, T("try.bad_type")
+    if not os.path.isfile(page):
+        return 1, T("open.no_file")
+    code = {}
+    for name in ("--before", "--after"):
+        if name in opts:
+            sp = real(opts[name])
+            if (not inside(sp) or not os.path.isfile(sp) or os.path.getsize(sp) > 262144 or secret_path(sp, root)
+                    or imported_instruction(root, sp, root)):
+                return 1, T("try.bad_script", name=name)
+            code[name] = read_text(sp) or ""
+    shot = real(opts["--shot"]) if "--shot" in opts else os.path.join(base, "evidence", "try-%s.png" % datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    if (not inside(shot) or not shot.lower().endswith(".png") or inside(shot, os.path.join("design", "evidence")) or os.path.isdir(shot)
+            or secret_path(shot, root)):
+        return 1, T("try.bad_shot")
+    m = re.match(r"^(\d{2,4})x(\d{2,4})$", opts.get("--size", "1280x800"))
+    wait = opts.get("--wait", "3000")
+    if not m or not wait.isdigit() or int(wait) > 30000:
+        return 2, T("try.usage")
+    found = find_browser()
+    if found is None:
+        return 3, T("try.no_browser")
+    browser, name = found
+    tmp = os.path.join(os.path.dirname(page), ".ccb-try-%d.html" % os.getpid())
+    common = ["--window-size=%s,%s" % (m.group(1), m.group(2)), "--virtual-time-budget=%d" % int(wait)]
+    try:
+        write_text(tmp, try_inject(read_text(page) or "", code.get("--before"), code.get("--after")))
+        url = pathlib.Path(tmp).as_uri()
+        has_out = lambda rc, out: b'id="ccb-try-out"' in out
+        rc, out = run_headless(browser, common + ["--dump-dom"], url, has_out)
+        dom = out.decode("utf-8", "replace")
+        try:
+            os.makedirs(os.path.dirname(shot), exist_ok=True)
+            if os.path.isfile(shot):
+                os.remove(shot)
+            run_headless(browser, common + ["--screenshot=" + shot], url, lambda rc2, out2: os.path.isfile(shot) and os.path.getsize(shot) > 0)
+        except OSError:
+            pass
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    rel = lambda path: rel_in_root(root, path) or path
+    lines = [T("try.browser", name=name)]
+    mo = re.search(r'(?is)<pre id="ccb-try-out"[^>]*>(.*?)</pre>', dom)
+    res = None
+    if mo:
+        try:
+            res = json.loads(htmllib.unescape(mo.group(1)))
+        except ValueError:
+            res = None
+    if not isinstance(res, dict):
+        lines.append(T("try.not_loaded", path=rel(page)) if dom.strip() else T("try.browser_failed", name=name))
+        ok = False
+    else:
+        ok = bool(res.get("ok"))
+        lines.append(T("try.loaded", path=rel(page)))
+        if not ok:
+            lines.append(T("try.error", error=str(res.get("error", ""))[:1500]))
+        elif "--after" in code:
+            lines.append(T("try.result", result=json.dumps(res.get("result"), ensure_ascii=False)[:3000]))
+        logs = [str(x)[:300] for x in (res.get("console") or [])][:30]
+        if logs:
+            lines.append(T("try.console") + "\n" + "\n".join("  " + x for x in logs))
+        dom = dom[:mo.start()] + dom[mo.end():]
+    text = page_text(dom) if dom.strip() else ""
+    if text:
+        lines.append(T("try.text") + "\n" + text)
+    lines.append(T("try.shot", path=rel(shot)) if os.path.isfile(shot) and os.path.getsize(shot) > 0 else T("try.no_shot"))
+    try:
+        secrets = secret_values(root, project=True)
+    except Exception:
+        secrets = []
+    return (0 if ok else 1), redact("\n".join(lines), secrets)
 
 
 def select_summary(root, slug):
@@ -4052,6 +5040,8 @@ def cli_main(argv):
     if cmd == "status":
         c0 = compute(root)
         print(stage_text(c0))
+        if c0["slug"] and c0["stage"] == "DONE":
+            print(goal_line(root, c0["slug"]))
         rl = repo_line(root, c0["slug"])
         if rl:
             print(rl)
@@ -4080,6 +5070,14 @@ def cli_main(argv):
         rc, msg = cmd_lang(root, rest)
     elif cmd == "open":
         rc, msg = cmd_open(root, rest[0] if rest else None)
+    elif cmd == "next":
+        rc, msg = cmd_next(root)
+    elif cmd == "where":
+        rc, msg = cmd_where(root)
+    elif cmd == "guide":
+        rc, msg = cmd_guide(root)
+    elif cmd == "try":
+        rc, msg = cmd_try(root, rest)
     elif cmd == "resign":
         rc, msg = cmd_resign(root)
     elif cmd == "excludes" and rest and rest[0] == "add":
@@ -4139,6 +5137,8 @@ def cli_main(argv):
         print(T("usage"))
         return 2
     print(msg)
+    if cmd != "guide":
+        refresh_guide(root)  # a command may have changed the state: the guide page follows (only when a project exists; never raises)
     return rc
 
 

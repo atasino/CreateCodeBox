@@ -14,7 +14,7 @@ CreateCodeBox is a workspace for turning an idea into an app with Claude Code, o
 
 Status: early version. So far, we have tried it with apps that run on your own computer. If you get stuck, it helps to have someone nearby who can answer questions.
 
-What we have checked so far: three test runs on a Mac, with permission prompts turned off. They went as far as the first picture. We have also run the one-sentence start in step 3 on a Mac, only in test runs with permission prompts turned off. We have not checked the build stage, Windows, or normal sessions. Details: [docs/details.md](docs/details.md).
+What we have checked so far: test runs on a Mac, with permission prompts turned off, in which a second AI played the person. In version 0.5.0, runs of this kind went from the first sentence to a working first version, in English and in Japanese. We have also run the one-sentence start in step 3 on a Mac, only in test runs with permission prompts turned off. We have not checked a normal session with a person, a real browser window, or Windows. Details: [docs/details.md](docs/details.md).
 
 CreateCodeBox is built so that the app's code (in `src/`) is not written until you approve. You do not need to remember commands, and Claude is told to explain each technical word in one short sentence. By default, the app is a web page that opens in your browser.
 
@@ -81,6 +81,18 @@ To use it from a phone, or to let other people use it, you need more work. One e
 3. To see only what you made, open the file `projects/<name>/src/index.html` inside your app's folder in Finder (Mac) or File Explorer (Windows) and double-click it. `<name>` is the name of your project's folder inside `projects/`.
 4. After you approve the design, Claude is told to keep a list of what is left in each project. It holds your wishes, problems, and to-dos, with their dates. Before that, your answers go into `PROJECT.md`. The list is saved in the `CreateCodeBox` folder, so a new session can pick it up. Ask "what is left?" to see the list, or "show the schedule" to see the dates. The schedule is also a page you can open in a browser: `projects/schedule.html` (inside the `CreateCodeBox` folder). The page updates by itself.
 
+## Built so you can tell where you are
+
+CreateCodeBox is built so that you can tell, at any moment, where you are and what to do next.
+
+<p align="center"><img src="docs/img/guide-en.png" alt="The guide page of CreateCodeBox, open in a browser. At the top is your goal in your own words. Below it are the six steps (Ask, Reference, Prototype, Approve, Build, Check) with a mark on the step you are at. Then it shows whose turn it is, the one thing to do next with a Copy button for the exact words to type, and the pages you can open." width="640"></p>
+
+- **A guide page.** When you start your first project, Claude is told to open `projects/guide.html` in your browser. The page shows your goal in your own words, the six steps with "You are here", whose turn it is, the one thing to do next, and the pages you can open. The workspace writes this page from your files, not from what Claude says. The page is built to update by itself while it is open.
+- **The `▶` line.** Claude is told to end each reply with one line that starts with `▶`. That line is the one thing you do next. When you need to type exact words, such as `looks good`, the line gives them. If a reply is about to end without that line, the workspace is built to stop it once and have Claude add it. If Claude stops before its own work is finished, the line and the guide page give you the word that lets Claude go on: `continue`.
+- **`help`.** Not sure what to do? Type `help` (or `what now?`). Claude is told to do no other work in that turn, and to tell you your goal, the step you are at, what is done, and the one next step.
+- **`finish`.** Claude is told to check the empty and failure cases itself. If it cannot finish them, you are not kept waiting: after you have tried all of your own checks, you can type `finish` to end the build as it is. The workspace then shows how many of Claude's checks were left.
+- **The goal question.** When the first version is done, Claude is told to ask you one question: does the app do what you said you wanted? Answer `yes` or `not yet`. The workspace records your own answer to that question. After `not yet`, Claude is told to ask what is missing and to add it.
+
 ## Updates
 
 Once a day, CreateCodeBox checks whether a new version is out. It asks the address it was copied from (usually GitHub) for the list of version names (`git ls-remote --tags`). Nothing from your projects is sent. Like any web request, it shows your IP address to that server. If it cannot get an answer, it says nothing and tries again the next day. When a new version is out, Claude tells you in one line, with a link to the page that says what changed.
@@ -92,7 +104,7 @@ To turn the daily check off, run `bash ws/bin/ws.sh update-check off`, or ask Cl
 ## What it does
 
 - It asks short questions, one at a time, and asks about a site or app that is close to what you want.
-- It shows a prototype, then a design.
+- It shows a prototype, then a design. The design you agree to is the finished look, in colour, and the app is built to match it.
 - It is built to keep keys and passwords out of the chat.
 
 ## How it goes: six stages
@@ -102,7 +114,7 @@ To turn the daily check off, run `bash ws/bin/ws.sh update-check off`, or ask Cl
 3. **Prototype.** Claude shows a prototype with a similar layout and flow to your reference. If you have no reference, Claude shows a rough first picture instead. You say what is most different from what you want. Claude fixes it. When you type `looks good`, the prototype becomes the design. You can also answer with a short, positive reply in your own words, such as "Looks great". Then the workspace tells Claude to ask you once whether to record that as `looks good`. Reply `yes` in your next message to record it.
 4. **Approve.** Claude shows a table of what goes in and what comes out. You type `approve` for that table and the design together. You can also answer with a short, positive reply in your own words. Then the workspace tells Claude to ask you once whether to record that as `approve`. Reply `yes` in your next message to record it.
 5. **Build.** Claude builds one step at a time. Claude is asked to run each step and write down what happened before it says the step is done.
-6. **Check.** Claude gives you a numbered list of things to check. You try each one and tell Claude, by number, which ones worked. Claude tells you what is checked and what is not.
+6. **Check.** Claude gives you a numbered list of things to check. You try each one and tell Claude, by number, which ones worked. You check what you asked for, once each. Claude is told to check the empty and failure cases itself; the workspace shows which of those are not checked yet. Claude tells you what is checked and what is not. When the first version is done, Claude is told to ask whether the app does what you said you wanted at the start. You answer `yes` or `not yet`.
 
 You are asked for your own input mainly at these six stages. Claude may ask a few more short questions, and Claude Code may ask you to trust a folder. Claude is told to decide the rest and to mark each guess as tentative.
 

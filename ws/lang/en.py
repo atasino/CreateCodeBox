@@ -9,17 +9,20 @@ MESSAGES = {
         "There is no project yet. Do not ask whether to continue or start new. "
         "Make a short lowercase name from the user's request (example: budget) and run "
         "`bash ws/bin/ws.sh new <name> --name <display name> --quote <a part of the user's request>`. "
+        "Right after it, run `bash ws/bin/ws.sh guide` once and tell the user in one line that a guide page opened in the browser "
+        "(it always shows where they are and what to do next). "
         "Then start the R1 (goal) questions."),
     "rule.R1": (
-        "Round R1 (goal). Find out the final goal with 3 choices: `just for me` / `show to others` / `not sure yet`. "
+        "Round R1 (goal). Find out the final goal with 3 choices: just for me / show to others / not sure yet. "
+        "Show the choices as plain words in the user's language, without backticks, and accept any wording of the answer (only the exact approval words go in backticks). "
         "Before the choices say: If unsure, pick \"not sure\" — I'll ask again after the first picture. "
-        "If the user picks `show to others`, ask one more thing: `friends only` / `public, free` / `public, paid`. "
+        "If the user picks show to others, ask one more thing: friends only / public, free / public, paid. "
         "Also guess what they want to make from their first sentence (`what`) and ask them to confirm it. "
         "At most 2 questions in this round, one per turn. "
         "Write PROJECT.md as `key: value` lines. goal_type is one of: self, share (friends only), public-free, public-paid, unknown. "
         "When R1 is done, ask one more question before the sketch: \"Is there a site or app that is close to what you want? Tell me its name or link. What do you like about it, and what should be different?\" "
         "\"None\" or \"not sure\" is a fine answer. Write the answer in PROJECT.md as `references:` lines, one per line, at most 3: `references: <name or link> | <what you like> | <what should be different>`. If there is none, write `references: none`. "
-        "Then write design/ui/sketch.html (skill ws-design): a low-fidelity grey wireframe with made-up text and data, no colors or decoration. If there is a reference, draw it in the form of the reference with the differences the user named; never copy its text, pictures or design. "
+        "Then write design/ui/sketch.html (skill ws-design): a low-fidelity grey wireframe with made-up text and data, no colors or decoration (it is rough on purpose: a question, not the design). If there is a reference, draw it in the form of the reference with the differences the user named; never copy its text, pictures or design. "
         "Put a banner on top: \"Based on <reference> and your words. Tell me what is different.\" (without a reference: \"Rough guess from one sentence — expect it to be wrong.\"). Put the attribute data-ccb=\"sketch\" on <body>, "
         "and no feature, column or button that is not in `what`. If there is no screen, draw one page: input -> output, with one made-up example marked \"example (made up)\". "
         "Then run `bash ws/bin/ws.sh open projects/<slug>/design/ui/sketch.html`. "
@@ -30,9 +33,13 @@ MESSAGES = {
         "Write the answers in PROJECT.md as `key: value` lines (who, today, done_when, not_doing, has_ui: yes or no). "
         "viz (how the design is shown) is `local` by default: do not ask about it. Offer Gakaso in one line only if the user wants to edit while looking, or after the second fix. "
         "If there is a screen, write design/ui/brief.md first (sections: ## Purpose, ## Layout, ## Colors, ## Text, ## States), then make design/ui/index.html. "
+        "The design is the finished look, in colour, not a wireframe: start from ws/templates/look.css copied inline into the page's <style> (see ws/templates/look.md), "
+        "choose ONE accent colour that suits the purpose and say why in brief.md, use large readable text, big buttons, a kind empty state, a clear error notice, "
+        "and real-looking example data from the user's words. With a reference, keep its layout and flow, never its colours, logo, text or pictures. "
         "Say \"reload the browser tab\" after every HTML fix."),
     "rule.R3": (
         "Round R3 (polish the look). Show the design and ask what to change; fix what the user points at. "
+        "The first sentence when you show it: \"This is how your app will look.\" The design is the finished look (ws/templates/look.md): the app is built to match it exactly. "
         "When the user sends exactly `looks good` (also accepted: `go with this`, `this design`), the workspace records it and we go on. "
         "Never say it for the user. If Gakaso is used, do not say what Gakaso can do until it is checked. Say \"reload the browser tab\" after every HTML fix."),
     "rule.R4": (
@@ -54,9 +61,32 @@ MESSAGES = {
         "(the workspace refuses it without a written result; never mark a row you did not run). "
         "It is finished when, in the system test list (`bash ws/bin/ws.sh st list --numbered`), the user has checked for themselves every case the user checks, "
         "and all normal cases pass. Green tests alone do not mean finished. "
-        "For the cases Claude checks, use `bash ws/bin/ws.sh st run <ID>` or `st mark <ID> pass --by ai --shot <a new image inside projects/> --evidence <what came out>`."),
+        "For the cases Claude checks, use `bash ws/bin/ws.sh st run <ID>` or `st mark <ID> pass --by ai --shot <a new image inside projects/> --evidence <what came out>`. "
+        "When the build rows are done: (1) Open the app for the user: `bash ws/bin/ws.sh open projects/<name>/src/index.html`. Say that it opened only if the output says so. "
+        "(2) Run `bash ws/bin/ws.sh st list --numbered` and show ALL of the user's checks in one numbered list, each as \"do this → you should see this\" in plain words. "
+        "Ask for one answer by number (for example: 1, 2 and 4 worked; 3 did not). Never ask for one check per turn. "
+        "Never ask the user to change browser settings, clear stored data, use developer tools, or find a file in Finder or Explorer: a case that needs that is your case "
+        "(`bash ws/bin/ws.sh st route <ID> ai --reason <why>`). "
+        "(3) The user checks what they asked for, once each. The empty and failure cases are yours: check them yourself with the tools you have. "
+        "If you cannot check one, say once how many are not checked, and go on. They do not block the first version. "
+        "To see or test a page yourself, use `bash ws/bin/ws.sh try projects/<name>/src/index.html` (it needs no extra tool): it runs the page in a browser without a window "
+        "and prints the text on the page and a screenshot path. `--before <file.js>` runs first (set stored data, or fix the date); `--after <file.js>` runs after the page loaded "
+        "(click, type, and return what you see). Use it for the evidence of each build row and for your own cases (the empty state: a new profile is empty by itself). "
+        "Keep the look of the approved design exactly (the same style block and structure as design/ui/index.html). "
+        "Call the reviewer once, before you show the user's checks, so that real defects are fixed first; not after the user has passed them. "
+        "If you cannot run your own cases after a real attempt, say so once in two sentences and tell the user the exact word that finishes as it is: `finish`. Never keep the user in a loop. "
+        "At this stage tell the user only what they can do now, what works, and what is not checked, in about eight short lines before the ▶ line: "
+        "no row or case IDs, nothing about helpers, records or signatures, and no new design question unless the user's own check failed "
+        "(decide it, note it as `tentative:` on the task board, and say it in one line)."),
     "rule.DONE": (
-        "Done. If a new request comes, ask: add to this project, or start a new one? "
+        "Done. The stage the workspace shows is what the user hears: when it says done, say done. "
+        "First tell the user, in at most six short lines: the first version is ready, how to open it (you opened it, and the guide page has the link), the real counts, "
+        "and then the goal question that the context gives. "
+        "Things a review found that do not break what the user asked for go on the task board (`bash ws/bin/ws.sh task add`), and are offered in one line after the goal answer "
+        "(\"I noted 3 small things to improve. Say `what is left?` to see them.\"). They do not delay done, and you do not ask permission for them before the goal question. "
+        "If something breaks what the user asked for, say that one thing plainly and fix it. "
+        "After a fix, your own check records can be replaced (`st mark <ID> pass --by ai --shot <a new image> --evidence <what came out>`, `st run <ID>`). "
+        "If a new request comes, ask: add to this project, or start a new one? "
         "To add, put a row in io.json (approval is reset automatically and we return to R4)."),
     # ---- stage labels and the stage line ----
     "stage.label.R0": "start (continue or new)",
@@ -73,7 +103,7 @@ MESSAGES = {
     "stage.missing": " missing: {items}",
     "sep.list": "; ",
     "sep.item": ", ",
-    "stage.done": "First version done! You checked: {u}/{ut}. Claude will check: {a}/{at} (things you can't trigger by hand). Not yet checked: {n}.",
+    "stage.done": "First version done! You checked: {u}/{ut}. Claude will check: {a}/{at} (the empty and failure cases, and things you can't trigger by hand). Not yet checked: {n}.",
     "stage.open": "To open what you made: double-click projects/{slug}/src/index.html",
     # ---- todo lines (what is missing to leave a round) ----
     "todo.r0": "Ask the user whether to continue or start a new project, and let them choose",
@@ -144,6 +174,94 @@ MESSAGES = {
     "word.r4a": "approve",
     "word.publish": "publish",
     "stop.ask": "The user has not said yet whether to continue a project or start a new one. Ask them.",
+    # ---- the next step (what the user does next; computed from the files, never from what the model says) ----
+    "next.none": "Tell Claude what you want to make, in one sentence. For example: I want to make a budget tracker.",
+    "next.r0": "Say `continue` to go on with your project, or `new` to start something else.",
+    "next.r1.what": "Answer Claude's question about what you want to make.",
+    "next.r1.goal": "Tell Claude who it is for: just for me, show to others, or not sure yet.",
+    "next.r2.ref": "Name a site or app that is close to what you want, and say what should be different. \"None\" is a fine answer.",
+    "next.r2.sketch": "Claude is making the first picture. It opens in your browser.",
+    "next.r2.look": "Look at the picture in your browser. Tell Claude what is most different from what you want.",
+    "next.r2.answer": "Answer Claude's question.",
+    "next.r3": "Look at the design in your browser. Tell Claude what to change. When it is right, type the words below.",
+    "next.r4": "Claude is writing the table of what goes in and what comes out.",
+    "next.r4a": "Read the table and the design. If something is missing, tell Claude. To start building, type the word below.",
+    "next.rs": "Claude is making the build plan.",
+    "next.run.build": "Claude is building your app, one step at a time.",
+    "next.run.check": "Open your app and try the {n} numbered checks. Tell Claude which numbers worked, for example: 1, 2 and 4 worked.",
+    "next.run.check1": "Open your app and try the one numbered check. Tell Claude whether it worked.",
+    "next.run.fix": "Claude is fixing what did not work in your checks ({n}). Then you try it again.",
+    "next.run.claude": "Claude is running its own checks: {n} left that cannot be tried by hand.",
+    "next.run.close": "Claude is finishing the last step: it records that the checks are done.",
+    "next.done.ask": "Open your app and try it. Does it do what you wanted? Answer yes or not yet.",
+    "next.done.yes": "Your app is ready. To open it, double-click {path}. To add something, tell Claude.",
+    "next.done.no": "Tell Claude what is still missing.",
+    "next.done.idle": "Tell Claude what to add or change, or say `what is left?`",
+    "next.confirm": "Answer yes to record it, or tell Claude what to change.",
+    "next.paused": "Claude stopped before this step was finished. To let Claude go on, type the word below.",
+    "word.continue": "continue",
+    "word.finish": "finish",
+    "next.paused_finish": "Claude could not finish its own checks ({n} left). To let Claude try again, type `{go}`. To finish with them not checked, type `{finish}`.",
+    "next.paused_finish0": "Claude stopped before the last steps were recorded. To let Claude go on, type `{go}`. To finish as it is, type `{finish}`.",
+    "stage.accepted": "You chose to finish with {n} checks not done by Claude and {rows} build steps not marked done.",
+    "note.recorded.accept": "Recorded the user's word to finish as it is. The first version is done.",
+    "note.accept_needs": (
+        "The user's word to finish was not recorded. It is recorded only at the build stage, when the app (src/index.html) exists and the user "
+        "has passed every one of their own checks ({p} of {t} so far). Show the numbered list (`bash ws/bin/ws.sh st list --numbered`) and ask for one answer by number."),
+    "stop.wait": (
+        "The work is not finished: {next} Go on with it now. Stop only if you need something from the user, or you truly cannot go on; "
+        "then say plainly what is not done and what the user can do, and end with the ▶ line. If you stop now, the user's next step is: {after}"),
+    "note.go_on": "The user asked you to go on. The unfinished step is yours: {next} Do that work now.",
+    "next.line": "Next for the user: {text}",
+    "next.say": "Exact words: {say}",
+    "rule.next": (
+        "End your reply with one line that starts with `▶` and tells the user the one thing they do next, in their language "
+        "(answer your question, type the exact words, look at a page, try the checks, or wait). One `▶` line only, and it is the last line. "
+        "If the state changed during your turn, run `bash ws/bin/ws.sh next` and use that. Never put a second question after it."),
+    "stop.next": (
+        "Before you finish: end your reply with one line that starts with ▶ and tells the user the one thing they do next. "
+        "Write only that one line now, in the user's language (do not repeat the rest of your reply). Now it is: {next}"),
+    # ---- the guide page, the recap for a user who is lost, and the goal question at the end ----
+    "note.grey_design": "The design page has no colour yet. The design must be the finished look (see ws/templates/look.md).",
+    "note.guide_open": (
+        "Run `bash ws/bin/ws.sh guide` once now. Then tell the user in one line: a guide page opened in the browser; "
+        "it always shows where you are and what to do next; it updates by itself. "
+        "(If the output says it could not open the page, give the user the path to double-click instead.)"),
+    "guide.page": "Guide page (where the user is and the one next step; it updates by itself): {path}",
+    "deny.guide_file": "The pages that the workspace writes (the guide page: guide.html and guide.data.js; the schedule pages: schedule.html) are touched only by ws.sh, so that they always show the real state. To open one, run `bash ws/bin/ws.sh guide` or `bash ws/bin/ws.sh open <path>`.",
+    "zone.guide": "The guide page ({rel}) is written only by ws.sh (`bash ws/bin/ws.sh guide`), so that it always shows the real state",
+    "note.lost": (
+        "The user is not sure what to do. In this turn do no other work. "
+        "Tell them this recap in their language, in plain words, and end with the ▶ line:"),
+    "where.goal": "Your goal: {what}",
+    "where.goal_none": "not said yet",
+    "where.step": "You are at step {n} of 6: {name} — {hint}",
+    "where.done": "Done so far: {items}",
+    "where.done.none": "nothing yet",
+    "where.d.project": "project started",
+    "where.d.sketch": "first picture made",
+    "where.d.design": "design agreed",
+    "where.d.plan": "plan approved",
+    "where.d.built": "{n} of {m} steps built",
+    "where.d.checked": "you checked {p} of {t}",
+    "where.next": "Next: {text}",
+    "where.always": "You can always say: `help` · `continue` · \"what is left?\" · \"show the guide\"",
+    "goal.q": "You wanted: {what}. Open the app and try it. Does it do that? Reply yes or not yet.",
+    "goal.what_default": "the app we planned",
+    "note.goal_ask": (
+        "The first version is done, and the user has not said yet whether it does what they wanted. "
+        "Ask the user once, word for word in their language: \"{question}\" Add nothing to it, and ask nothing else in this turn. "
+        "End your reply with a ▶ line that asks for that answer: yes or not yet. "
+        "If the user's next message is a plain yes or a plain not yet, the workspace records it. Never answer for the user."),
+    "note.goal_yes": (
+        "Recorded the user's answer: the app does what they wanted. Tell them once how to open it, and that they can ask for more at any time. "
+        "If their yes was an answer to another question of yours, tell them what was recorded."),
+    "note.goal_no": (
+        "Recorded the user's answer: something is still missing. Ask what is missing, in one question. "
+        "When they answer, put it on the task board, then add a row to io.json (the approval is reset automatically and we return to R4)."),
+    "goal.state.yes": "Goal: you said it does what you wanted.",
+    "goal.state.no": "Goal: you said something is still missing.",
+    "goal.state.none": "Goal: not answered yet (does the app do what you wanted? yes or not yet).",
     # ---- project list, materials, repo line ----
     "list.none": "Existing projects: none (start a new one)",
     "list.head": "Existing projects:",
@@ -249,6 +367,24 @@ MESSAGES = {
     "open.bad_type": "Only .html, .png, .svg and .pdf files can be opened.",
     "open.no_file": "That file does not exist.",
     "open.would": "Would open: {path}",
+    "try.usage": "usage: ws.sh try <page.html> [--before <file.js>] [--after <file.js>] [--shot <out.png>] [--size WxH] [--wait <ms>]   (paths from the workspace root, inside the project)",
+    "try.local_only": "try runs a file of the project only. It does not open an address (anything with ://).",
+    "try.src_stage": "A page in src/ can be tried from the build stage on (now: {label}). A page in design/ can be tried now.",
+    "try.bad_type": "Only .html files can be tried.",
+    "try.bad_script": "The file for {name} must be a file inside projects/<name>/ (256 KB at most).",
+    "try.bad_shot": "The picture must be a .png inside projects/<name>/ (not in design/evidence/, which holds the records).",
+    "try.no_browser": "No browser that can run without a window (Chrome, Edge, Chromium or Brave) was found on this computer, so the page was not run. These checks stay \"not checked\".",
+    "try.browser_failed": "The browser ({name}) did not give the page back, so the page was not run. These checks stay \"not checked\".",
+    "try.browser": "Browser: {name} (no window, a new empty profile)",
+    "try.loaded": "Page: {path} (loaded)",
+    "try.not_loaded": "Page: {path}: it did not finish loading, so no result came back.",
+    "try.result": "Result of the --after script: {result}",
+    "try.error": "The --after script failed: {error}",
+    "try.console": "Console lines:",
+    "try.text": "Text on the page (first 1,500 characters):",
+    "try.shot": "Screenshot: {path}",
+    "try.no_shot": "Screenshot: it could not be made.",
+    "st.done_only_ai": "The first version is done, so the user's checks are closed. Claude's own cases can still be checked again: `bash ws/bin/ws.sh st mark <ID> pass|fail --by ai --shot <a new image> --evidence <what came out>`, or `st run <ID>`.",
     "open.done": "Opened: {path}. If it does not show, open the file by double-clicking it.",
     "open.failed": "Could not open it. Open this file by double-clicking it: {path}",
     "select.need_answer": "Ask the user whether to continue or start new, and run this after you get an answer (the user has not replied yet).",
@@ -292,7 +428,7 @@ MESSAGES = {
     "update.reopen": "Close Claude Code (or Codex) and open it again, so the new version is used.",
     "version.unknown": "unknown",
     "usage": (
-        "usage: ws.sh status | list | select <name> --quote <user words> | new <name> --name <display name> --quote <user words> | "
+        "usage: ws.sh status | next | where | guide | try <page.html> [--before <file.js>] [--after <file.js>] [--shot <out.png>] [--size WxH] [--wait <ms>] | list | select <name> --quote <user words> | new <name> --name <display name> --quote <user words> | "
         "lint | render | open <path> | lang [set <code>] | schedule-init | mark <ID> <state> [--evidence <text>] [--note <reason>] | "
         "st init | st list [--numbered] | st mark <ID>|numbered pass|fail|todo --by user|ai [--evidence <text> | --evidence - | --evidence-file <path>] [--shot <image>] | "
         "st run <ID...> [--timeout N] | st route <ID> user|ai --reason <text> | harden on|off|status [--with-denywrite] | learn [topic] | "
@@ -503,6 +639,9 @@ MESSAGES = {
     "st.list.numbered": "{n}. {id} [{who}] [{kind}/{state}] {what} -> {expected}  ({status})",
     "st.list.counts": "Passed {p} of {t} (failed {f}; abnormal cases: edge, empty or failure: {ab})",
     "st.list.summary": "You checked: {u}/{ut}. Claude checks: {a}/{at}.",
+    "st.list.claude": "Claude checks {n} more cases itself (the empty and failure cases, and things that cannot be tried by hand): {p} of {n} checked. They are in `bash ws/bin/ws.sh st list`, not in this numbered list.",
+    "st.numbered.failed": "Not recorded as passed, because the user's message says they did not work: {ids}. For each one, record what the user saw with `bash ws/bin/ws.sh st mark <ID> fail --by user --evidence \"<what the user saw>\"`, fix it, and ask the user to try it again.",
+    "st.numbered.unclear": "Not recorded, because the user's message does not clearly say that they worked: {ids}. Ask the user once to answer for these numbers, for example: 1, 2 and 4 worked; 3 did not.",
     "st.list.warn": "Note: abnormal cases do not reach half. Add how failures look to the design (failure in io.json).",
     "st.status.pass": "passed",
     "st.status.fail": "failed",
@@ -796,4 +935,55 @@ MESSAGES = {
     "html.tasks.s1_title": "Make the input screen",
     "html.tasks.s2_title": "Add the monthly total",
     "html.tasks.s3_title": "Save the list as a CSV file",
+    "html.guide.title": "Your guide",
+    "html.guide.lead": "Where you are, and what to do next. This page updates by itself.",
+    "html.guide.goal_head": "Your goal",
+    "html.guide.goal_empty": "Not said yet",
+    "html.guide.goal_for.self": "just for me",
+    "html.guide.goal_for.share": "to show to others",
+    "html.guide.goal_for.public-free": "public, no charge",
+    "html.guide.goal_for.public-paid": "public, paid",
+    "html.guide.goal_for.unknown": "not decided yet",
+    "html.guide.here": "You are here",
+    "html.guide.step_of": "Step {n} of 6",
+    "html.guide.step.1": "Ask",
+    "html.guide.step.2": "Reference",
+    "html.guide.step.3": "Prototype",
+    "html.guide.step.4": "Approve",
+    "html.guide.step.5": "Build",
+    "html.guide.step.6": "Check",
+    "html.guide.hint.1": "You say what you want to make",
+    "html.guide.hint.2": "You name a close site or app",
+    "html.guide.hint.3": "You look, and say what is different",
+    "html.guide.hint.4": "You read the plan and approve",
+    "html.guide.hint.5": "Claude builds, one step at a time",
+    "html.guide.hint.6": "You try it and say what worked",
+    "html.guide.turn_you": "Your turn",
+    "html.guide.turn_claude": "Claude is working",
+    "html.guide.turn_claude_hint": "Nothing to do right now.",
+    "html.guide.type_this": "Type this in Claude Code:",
+    "html.guide.copy": "Copy",
+    "html.guide.copied": "Copied",
+    "html.guide.open_head": "Things you can open",
+    "html.guide.link.prototype": "Prototype",
+    "html.guide.link.design": "Design",
+    "html.guide.link.table": "Table of inputs and outputs",
+    "html.guide.link.plan": "Build plan",
+    "html.guide.link.checks": "List of checks",
+    "html.guide.link.app": "Your app",
+    "html.guide.link.schedule": "Schedule of all projects",
+    "html.guide.build_head": "Build",
+    "html.guide.build_count": "{done} of {total} steps built",
+    "html.guide.checks_head": "Checks",
+    "html.guide.checks_you": "You checked {p} of {t}",
+    "html.guide.checks_claude": "Claude checked {p} of {t}",
+    "html.guide.goal_yes": "You said it does what you wanted.",
+    "html.guide.goal_no": "You said something is still missing.",
+    "html.guide.lost_head": "Not sure what to do?",
+    "html.guide.lost_body": "Type the word below in Claude Code. Claude tells you where you are and the one next step.",
+    "html.guide.lost_say": "help",
+    "html.guide.no_project": "Tell Claude what you want to make, in one sentence. For example: I want to make a budget tracker.",
+    "html.guide.others_head": "Other projects",
+    "html.guide.updated": "Updated {time}",
+    "html.guide.stale": "Nothing has changed for a while. If Claude Code is closed, open it again in this folder and say: continue",
 }

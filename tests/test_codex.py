@@ -235,8 +235,15 @@ def test_adapter():
         check("codex adapter: a key in the prompt = {decision: block, reason} and no Claude-only field", o.get("decision") == "block" and o.get("reason")
               and "hookSpecificOutput" not in o and rc == 0, out[:200])
         e.run(["new", "app", "--name", "App", "--quote", "make a small tool"])
-        rc, out = e.chook("stop", {"hook_event_name": "Stop", "stop_hook_active": False, "last_assistant_message": "done", "cwd": e.root})
+        rc, out = e.chook("stop", {"hook_event_name": "Stop", "stop_hook_active": False, "last_assistant_message": "done\n\u25b6 Answer the question.", "cwd": e.root})
         check("codex adapter: Stop with nothing to say = exit 0 and no output", rc == 0 and out == "", (rc, out))
+        e.chook("prompt", {"hook_event_name": "UserPromptSubmit", "prompt": "hello", "cwd": e.root})
+        rc, out = e.chook("stop", {"hook_event_name": "Stop", "stop_hook_active": False, "last_assistant_message": "done", "cwd": e.root})
+        o = json.loads(out) if out else {}
+        check("codex adapter: Stop for a reply with no next-step line = {decision: block, reason} (Codex goes on with the reason as the prompt)",
+              rc == 0 and set(o) == {"decision", "reason"} and o.get("decision") == "block" and "\u25b6" in o.get("reason", ""), (rc, out))
+        rc, out = e.chook("stop", {"hook_event_name": "Stop", "stop_hook_active": True, "last_assistant_message": "done", "cwd": e.root})
+        check("codex adapter: the continued turn (stop_hook_active) passes", rc == 0 and out == "", (rc, out))
         # tool names the Codex shell may use are Bash for the engine
         check("codex adapter: exec_command with {cmd} is Bash for the engine", CX.normalize_event({"tool_name": "exec_command", "tool_input": {"cmd": "ls -l"}})["tool_name"] == "Bash"
               and CX.normalize_event({"tool_name": "shell", "tool_input": {"command": ["bash", "-lc", "ls"]}})["tool_input"]["command"] == "bash -lc ls")

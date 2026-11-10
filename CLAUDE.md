@@ -14,4 +14,6 @@
 - Before you start work, say what you will do in one or two sentences.
 - Never write a secret value (password, API key, token) in a file or in the chat. Never read one.
 - State is shown by `bash ws/bin/ws.sh status`.
+- End every reply with one line that starts with `▶`: the one thing the user does next. The context gives it at every turn (`Next for the user:`). It is the last line, and there is only one. If the state changed during your turn, run `bash ws/bin/ws.sh next` first and use that.
+- The user sees where they are in `projects/guide.html`. The workspace writes it, and `bash ws/bin/ws.sh guide` opens it. If the user says they are lost (`help`, `迷った`), the context has a recap: tell it, and do nothing else in that turn. When the first version is done, the context has one question about the goal: ask it once, word for word.
 - Every wish, problem, to-do and date the user gives goes on the task board (`ws-tasks`) before you act. The hook tells you when. The user sees the schedule in `projects/schedule.html`.

@@ -36,6 +36,8 @@ Never run `task set <id> done` for work you did not run or check. Write what you
 - "What is left?" or "how is it going": run `bash ws/bin/ws.sh tasks` and show the list.
 - "Show the schedule" or a question about dates: run `bash ws/bin/ws.sh tasks gantt --text`. Show the text grid in the chat (`#` fixed date, `~` guessed date, `=` done, `>` doing, `^` today). Give the page path (`projects/schedule.html`, the full path the command prints). The hooks keep it current, and it reloads by itself.
 - Show the grid at the start of a session only when the user is choosing continue or new. Not after every update.
+- "Where am I?", "what do I do next?", `help` or `迷った`: the context has the recap (`bash ws/bin/ws.sh where` prints it too). Tell it in plain words and end with the `▶` line. Do no other work in that turn, and do not sort that message onto the board.
+- "Show the guide": run `bash ws/bin/ws.sh guide`. It opens `projects/guide.html`, the page with the goal, the six steps, and the one next step.
 
 ## At the start of a session
 

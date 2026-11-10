@@ -13,6 +13,8 @@ Check these five points:
 2. **Secrets.** No key or password is written in code or settings. No `VITE_` or `NEXT_PUBLIC_` variable holds a secret. `.env` is not in a commit.
 3. **Evidence.** For each row marked done, read the evidence. Did someone run the user's real example and get the expected result? If the evidence does not say so, report "not checked".
 4. **Words for the user.** Text on screen and in notes is plain and short. Check it against `ws/style/plain-words.<lang>.md`: no word from the left side of its tables, no inside names, no "beginner" or "easy".
-5. **Look.** `design/ui/brief.md` is followed: three colors at most, readable text sizes, an empty state and an error state.
+5. **Look.** `design/ui/brief.md` is followed: three colors at most, readable text sizes, an empty state and an error state. The app (`src/index.html`) matches the approved design (`design/ui/index.html`): the same colours, sizes and structure. Never ask to remove colour or polish that the approved design has.
 
-Return only: `pass` or `fix`, and a list of what to fix (file, place, reason). Write each item in plain words too (`ws/style/plain-words.<lang>.md`). Do not fix anything yourself.
+Sort what you find into two lists. **Breaks what the user asked for**: a row of the design that does not work, a wrong result, a secret in the code. **To improve**: everything else. Only the first list holds back the user's checks; the second goes on the task board and never delays "done".
+
+Return only: `pass` or `fix`, and the two lists (file, place, reason). Write each item in plain words too (`ws/style/plain-words.<lang>.md`). Do not fix anything yourself.

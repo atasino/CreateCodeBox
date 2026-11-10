@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Your guide</title>
+<style>
+:root{
+  --bg:#f4f6fa; --surface:#ffffff; --surface2:#edf0f6;
+  --ink:#1d2330; --muted:#4b5565; --line:#dde2ec; --line2:#b9c1d1;
+  --blue:#2457d6; --blue-ink:#ffffff; --blue-soft:#e8eefd; --blue-text:#1f4cc2;
+  --amber:#ffb55e; --amber-ink:#1d2330; --amber-soft:#fff5e6; --amber-deep:#c97a14;
+  --green:#1b7a48; --green-ink:#ffffff; --green-soft:#e8f6ee; --green-line:#8fd0ad;
+  --work:#f3f6ff; --work-line:#bccdf8;
+  --chip:#1d2330; --chip-ink:#ffffff; --chip-dim:#98a3b9;
+  --shadow:0 1px 2px rgba(29,35,48,.05),0 8px 24px rgba(29,35,48,.06);
+  --shadow-turn:0 2px 4px rgba(29,35,48,.05),0 18px 44px rgba(29,35,48,.10);
+  --move:cubic-bezier(.22,.8,.24,1);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#131822; --surface:#1d2330; --surface2:#283042;
+    --ink:#f3f5f9; --muted:#aab3c5; --line:#323b4f; --line2:#56617a;
+    --blue:#8fb0ff; --blue-ink:#131822; --blue-soft:#22304f; --blue-text:#a8c1ff;
+    --amber:#ffb55e; --amber-ink:#1d2330; --amber-soft:#33281a; --amber-deep:#ffb55e;
+    --green:#6ed5a0; --green-ink:#10241a; --green-soft:#17302a; --green-line:#2f6e53;
+    --work:#1b2438; --work-line:#3d5288;
+    --chip:#0c1018; --chip-ink:#f3f5f9; --chip-dim:#7c879e;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);
+    --shadow-turn:0 2px 4px rgba(0,0,0,.3),0 18px 44px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);overflow-wrap:break-word;
+  font:17px/1.65 /*__WS_FONT__*/system-ui,-apple-system,"Segoe UI",sans-serif;}
+:lang(ja) body{line-break:strict;word-break:auto-phrase}
+.wrap{max-width:1120px;margin:0 auto;padding:20px clamp(16px,3vw,32px) 36px}
+h1,h2,p,ol,ul{margin:0}
+ol,ul{padding:0;list-style:none}
+svg.ic{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+svg.ic.solid{fill:currentColor;stroke-width:1.5}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
+.sec-h{font-size:19px;line-height:1.4;font-weight:750;margin:0 2px 12px}
+a:focus-visible,button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+
+/* header */
+.top{display:grid;grid-template-columns:auto minmax(0,auto) minmax(84px,1fr);align-items:center;column-gap:14px}
+.mark{grid-column:1;grid-row:1;width:44px;height:44px;border-radius:11px}
+.top-txt{grid-column:2;grid-row:1;min-width:0}
+.brand{font-size:15px;line-height:1.3;font-weight:700;color:var(--muted)}
+h1{font-size:27px;line-height:1.3;font-weight:800}
+.lead{grid-column:1/-1;grid-row:2;margin-top:10px;color:var(--muted);font-size:16px;line-height:1.55}
+.proj{display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:min(100%,320px);padding:6px 14px 6px 11px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--line);font-size:16px;font-weight:650;line-height:1.4;grid-column:3;grid-row:1;justify-self:end}
+.proj svg{width:19px;height:19px;color:var(--blue-text)}
+.proj span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#notice{margin-top:14px;padding:9px 14px;border-radius:12px;background:var(--blue-soft);border:1px solid var(--line);font-size:16px}
+.nojs{margin-top:20px}
+
+/* goal */
+.goal{margin-top:26px}
+.goal-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.goal-top h2{font-size:16px;line-height:1.5;font-weight:750;color:var(--blue-text)}
+.for{display:inline-flex;align-items:center;gap:6px;padding:1px 11px 1px 8px;border-radius:999px;border:1px solid var(--line2);
+  font-size:15px;line-height:1.6;color:var(--muted)}
+.for svg{width:17px;height:17px}
+.goal-text{margin-top:6px;font-size:clamp(22px,16px + 1.3vw,30px);line-height:1.4;font-weight:750;max-width:34em;
+  overflow-wrap:anywhere;text-wrap:balance}
+.goal-text.none{color:var(--muted);font-weight:600}
+
+/* path + turn + progress */
+.hero{display:grid;gap:18px;margin-top:22px;align-items:start}
+.path{position:relative;isolation:isolate;padding:16px 10px 12px;min-width:0}
+.path-h{margin:0 10px 8px;font-size:16px;line-height:1.5;font-weight:750;color:var(--muted)}
+.step{position:relative;display:flex;align-items:flex-start;gap:12px;padding:7px 10px}
+.dot{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;
+  border:2px solid var(--line2);background:var(--surface);color:var(--muted);
+  font-size:15px;font-weight:750;line-height:1;font-variant-numeric:tabular-nums;
+  transition:background-color .3s,border-color .3s,color .3s,box-shadow .3s}
+.dot svg{display:none;width:18px;height:18px;stroke-width:2.6}
+.step.done .dot{background:var(--blue);border-color:var(--blue);color:var(--blue-ink)}
+.step.done .dot svg{display:block}
+.step.done .dot b{display:none}
+.step.now .dot{background:var(--amber);border-color:var(--amber);color:var(--amber-ink);box-shadow:0 0 0 4px var(--surface)}
+.step:not(:last-child)::before,.step:not(:last-child)::after{content:"";position:absolute;left:23.5px;top:40px;bottom:-4px;width:3px;border-radius:2px;background:var(--line)}
+.step:not(:last-child)::after{background:var(--blue);transform:scaleY(0);transform-origin:top;transition:transform .35s var(--move)}
+.step.done:not(:last-child)::after{transform:scaleY(1)}
+.st-body{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px;padding-top:2px}
+.st-name{min-width:6.2em;font-size:17px;line-height:26px;font-weight:750;overflow-wrap:normal;transition:color .3s}
+.st-hint{flex:1 1 13em;font-size:15px;line-height:22px;color:var(--muted);padding:1px 0 2px}
+.step.todo .st-name{color:var(--muted);font-weight:650}
+.step.cur .st-name{margin-right:calc(var(--pinw,104px) + 8px);min-width:0}
+.step.cur .st-hint{flex-basis:100%;color:var(--ink)}
+.cursor{position:absolute;z-index:-1;left:8px;right:8px;top:0;height:var(--h,0px);transform:translateY(var(--y,0px));
+  border-radius:14px;background:var(--surface2);opacity:0;
+  transition:transform .35s var(--move),height .35s var(--move),opacity .25s}
+.cursor.on{opacity:1}
+.snap .cursor{transition:none}
+.pin{position:absolute;right:9px;top:8px;padding:0 10px;border-radius:999px;background:var(--amber);color:var(--amber-ink);
+  font-size:13.5px;line-height:24px;font-weight:750;white-space:nowrap}
+
+.turn{position:relative;overflow:hidden;min-width:0;border-radius:22px;border:2px solid var(--line);background:var(--surface);
+  box-shadow:var(--shadow-turn);transition:background-color .3s,border-color .3s,height .3s var(--move)}
+.turn.is-you{background:var(--amber-soft);border-color:var(--amber)}
+.turn.is-claude{background:var(--work);border-color:var(--work-line)}
+.turn.is-done{background:var(--green-soft);border-color:var(--green-line)}
+.tl{padding:22px clamp(18px,3vw,28px) 24px}
+.tl.out{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .18s;pointer-events:none}
+.tl.in{animation:fade .3s .12s both}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.t-head{font-size:21px;line-height:1.4;font-weight:800}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:4px 16px 4px 11px;border-radius:999px;background:var(--amber);color:var(--amber-ink)}
+.badge svg{width:17px;height:17px}
+.is-claude .t-head{display:flex;align-items:center;gap:12px}
+.dots{display:inline-flex;gap:5px;padding:9px 11px;border-radius:999px;background:var(--blue-soft);box-shadow:inset 0 0 0 1px var(--work-line)}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:pulse 1.5s ease-in-out infinite}
+.dots i:nth-child(2){animation-delay:.2s}
+.dots i:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,70%,100%{opacity:.28;transform:scale(.85)}35%{opacity:1;transform:scale(1)}}
+.t-text{margin-top:14px;max-width:32em;font-size:clamp(20px,17px + .45vw,23px);line-height:1.5;font-weight:650;overflow-wrap:anywhere}
+.is-claude .t-text{font-weight:500}
+.t-hint{margin-top:8px;color:var(--muted)}
+.is-claude .t-head + .t-hint{margin-top:12px;font-size:clamp(20px,17px + .45vw,23px);line-height:1.5;color:var(--ink)}
+.t-stale{display:flex;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:16px;animation:fade .35s both}
+.t-stale svg{margin-top:2px}
+.t-done{display:flex;align-items:flex-start;gap:16px}
+.t-done .t-text{margin-top:4px}
+/* a word to type that is named inside a sentence (it comes in backticks): a small chip, never markup from the text */
+.t-text code,.lost code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;font-size:.9em;font-weight:650;
+  padding:.06em .42em;border-radius:8px;background:var(--surface);border:1px solid var(--line2);color:var(--ink);white-space:nowrap}
+.okmark{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--green);color:var(--green-ink)}
+.okmark svg{width:26px;height:26px;stroke-width:2.8}
+.t-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.tbtn{display:inline-flex;align-items:center;gap:9px;min-height:48px;padding:6px 14px 6px 12px;border-radius:14px;
+  background:var(--surface);border:1px solid var(--line2);color:var(--ink);font-weight:700;text-decoration:none;
+  transition:border-color .2s,transform .2s}
+.tbtn:hover{border-color:var(--blue);transform:translateY(-1px)}
+.tbtn svg:first-child{color:var(--blue-text)}
+.tbtn svg:last-child{width:18px;height:18px;color:var(--muted)}
+.tbtn.main{background:var(--blue);border-color:var(--blue);color:var(--blue-ink)}
+.tbtn.main svg{color:inherit}
+.t-say{margin-top:18px}
+.t-label{font-size:16px;font-weight:650;color:var(--muted)}
+.sayrow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin-top:8px}
+.say{display:inline-flex;align-items:center;gap:.55em;min-width:0;padding:10px 20px 10px 16px;border-radius:14px;
+  background:var(--chip);color:var(--chip-ink);border:1px solid var(--chip);
+  font:650 clamp(23px,18px + .8vw,26px)/1.35 ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+.say i{font-style:normal;color:var(--chip-dim);-webkit-user-select:none;user-select:none}
+.say span{overflow-wrap:anywhere;-webkit-user-select:all;user-select:all}
+.copy{display:inline-grid;align-items:center;justify-items:center;min-height:54px;padding:0 20px;border:0;border-radius:14px;cursor:pointer;
+  background:var(--blue);color:var(--blue-ink);font:inherit;font-size:17px;font-weight:750;white-space:nowrap;
+  transition:background-color .2s,transform .2s}
+.copy:hover{transform:translateY(-1px)}
+.copy:active{transform:none}
+.copy > span{grid-area:1/1;display:inline-flex;align-items:center;gap:8px}
+.copy .cp-z{visibility:hidden}
+.copy.ok .cp-a{visibility:hidden}
+.copy.ok .cp-z{visibility:visible}
+.copy svg{width:20px;height:20px}
+.copy.quiet{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line2)}
+
+.prog{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px 32px;padding:18px 22px 20px;min-width:0}
+.pg h2{font-size:16px;line-height:1.5;font-weight:750;color:var(--muted)}
+.pg-row + .pg-row{margin-top:12px}
+.pg-count{font-size:17px;font-weight:650;line-height:1.5}
+.bar{height:10px;margin-top:7px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.bar i{display:block;height:100%;width:var(--w,0%);border-radius:999px;background:var(--blue);transition:width .4s var(--move)}
+.bar.you i{background:var(--amber-deep)}
+.pg-goal{grid-column:1/-1;display:flex;align-items:flex-start;gap:10px;padding-top:14px;border-top:1px solid var(--line);font-weight:650}
+.pg-goal:first-child{padding-top:0;border-top:0}
+.pg-goal svg{margin-top:3px}
+.pg-goal.yes svg{color:var(--green)}
+.pg-goal.no svg{color:var(--amber-deep)}
+
+/* things you can open */
+.open{min-width:0;margin-top:10px}
+.lost,.others{margin-top:30px}
+.links{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.lk{display:flex;align-items:center;gap:14px;min-height:68px;padding:12px 16px 12px 14px;border-radius:18px;
+  background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);color:var(--ink);
+  font-weight:700;line-height:1.4;text-decoration:none;transition:border-color .2s,transform .2s}
+.lk:hover{border-color:var(--blue);transform:translateY(-1px)}
+.lk-ic{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--blue-soft);color:var(--blue-text)}
+.lk-t{flex:1;min-width:0}
+.lk > svg{width:20px;height:20px;color:var(--muted)}
+.lk.app{grid-column:1/-1;min-height:80px;padding:14px 20px 14px 16px;background:var(--blue);border-color:var(--blue);color:var(--blue-ink);font-size:21px;font-weight:800}
+.lk.app .lk-ic{width:50px;height:50px;border-radius:15px;background:var(--blue-ink);color:var(--blue)}
+.lk.app .lk-ic svg{width:26px;height:26px}
+.lk.app > svg{width:24px;height:24px;color:inherit}
+
+/* not sure what to do */
+.lost{display:flex;flex-wrap:wrap;align-items:center;gap:14px 32px;padding:20px 22px}
+.lost-txt{flex:1 1 320px;min-width:0}
+.lost h2{display:flex;align-items:center;gap:9px;font-size:19px;line-height:1.4;font-weight:750}
+.lost h2 svg{color:var(--blue-text)}
+.lost-txt p{margin-top:5px;color:var(--muted)}
+.lost .sayrow{margin-top:0}
+.lost .say{font-size:22px}
+
+/* other projects */
+.olist li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 20px;padding:12px 20px;border-top:1px solid var(--line)}
+.olist li:first-child{border-top:0}
+.o-name{font-weight:700;overflow-wrap:anywhere}
+.o-step{color:var(--muted);font-size:16px}
+
+footer{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 18px;margin-top:34px;color:var(--muted);font-size:15px}
+
+@media (min-width:720px){
+  .hero{grid-template-columns:clamp(292px,34%,372px) minmax(0,1fr);grid-template-rows:auto auto auto 1fr;gap:0 22px}
+  .hero > .prog{margin-top:18px}
+  .hero > .open{margin-top:26px}
+  .hero.solo{grid-template-columns:minmax(0,1fr)}
+  .hero > *{grid-column:2}
+  .hero > .path{grid-column:1;grid-row:1 / span 4;padding-bottom:14px}
+  .hero.solo > *{grid-column:1}
+  .step{padding-top:9px;padding-bottom:9px}
+  .step:not(:last-child)::before,.step:not(:last-child)::after{top:42px;bottom:-6px}
+  .st-hint{flex-basis:100%}
+}
+@media (min-width:960px){
+  .top{grid-template-columns:auto auto minmax(0,1fr) auto;column-gap:16px}
+  .lead{grid-column:3;grid-row:1;align-self:end;margin:0;padding-bottom:4px}
+  .proj{grid-column:4}
+}
+@media (max-width:719px){
+  /* a narrow window beside the terminal: what to do now comes before the map */
+  .hero > .turn{order:-1}
+}
+@media (max-width:480px){
+  /* the project name goes up beside the product name, so the title keeps one line */
+  .top{column-gap:12px}
+  .top-txt{display:contents}
+  .mark{grid-row:1 / span 2;width:40px;height:40px}
+  .brand{grid-column:2;grid-row:1;align-self:center}
+  h1{grid-column:2 / -1;grid-row:2;font-size:24px}
+  .lead{grid-row:3}
+  .proj{gap:6px;padding:2px 11px 2px 8px;font-size:15px}
+  .proj svg{width:17px;height:17px}
+  .tl{padding-top:18px;padding-bottom:20px}
+  .lost .say{font-size:22px}
+  .lost .sayrow,.lost .copy{flex:1 1 auto}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <svg class="mark" viewBox="0 0 512 512" aria-hidden="true" focusable="false">
+      <rect width="512" height="512" rx="102.4" fill="#2457d6"/>
+      <rect x="256" y="51" width="205" height="205" rx="36.9" fill="#ffb55e"/>
+      <rect x="121.5" y="121.5" width="269" height="269" rx="68.9" fill="#2457d6"/>
+      <rect x="153.5" y="153.5" width="205" height="205" rx="36.9" fill="#ffffff"/>
+      <rect x="19" y="224" width="269" height="269" rx="68.9" fill="#2457d6"/>
+      <rect x="51" y="256" width="205" height="205" rx="36.9" fill="#ffffff"/>
+    </svg>
+    <div class="top-txt">
+      <p class="brand">CreateCodeBox</p>
+      <h1 id="title" data-l="title">Your guide</h1>
+    </div>
+    <p class="lead" data-l="lead">Where you are, and what to do next. This page updates by itself.</p>
+    <p class="proj" id="proj" hidden></p>
+  </header>
+  <p id="notice" role="status" hidden></p>
+
+  <main>
+    <section class="goal" id="goal" aria-labelledby="h-goal" hidden>
+      <div class="goal-top">
+        <h2 id="h-goal" data-l="goal_head">Your goal</h2>
+        <span class="for" id="goal-for" hidden></span>
+      </div>
+      <p class="goal-text" id="goal-text"></p>
+    </section>
+
+    <div class="hero" id="hero">
+      <section class="card path" id="path" aria-labelledby="h-path" hidden>
+        <h2 class="path-h" id="h-path"></h2>
+        <ol id="steps"></ol>
+        <div class="cursor" id="cursor" aria-hidden="true"><span class="pin" id="pin"></span></div>
+      </section>
+      <section class="turn" id="turn" aria-labelledby="h-turn" aria-live="polite" aria-atomic="true" hidden></section>
+      <div class="card prog" id="prog" hidden>
+        <div class="pg" id="pg-build">
+          <h2 data-l="build_head">Build</h2>
+          <p class="pg-count" id="pg-build-n"></p>
+          <div class="bar" aria-hidden="true"><i id="pg-build-b"></i></div>
+        </div>
+        <div class="pg" id="pg-checks">
+          <h2 data-l="checks_head">Checks</h2>
+          <div class="pg-row" id="pg-you">
+            <p class="pg-count" id="pg-you-n"></p>
+            <div class="bar you" aria-hidden="true"><i id="pg-you-b"></i></div>
+          </div>
+          <div class="pg-row" id="pg-claude">
+            <p class="pg-count" id="pg-claude-n"></p>
+            <div class="bar" aria-hidden="true"><i id="pg-claude-b"></i></div>
+          </div>
+        </div>
+        <p class="pg-goal" id="pg-goal"></p>
+      </div>
+      <section class="open" id="open" aria-labelledby="h-open" hidden>
+        <h2 class="sec-h" id="h-open" data-l="open_head">Things you can open</h2>
+        <div class="links" id="links"></div>
+      </section>
+    </div>
+
+    <section class="card lost" id="lost" aria-labelledby="h-lost" hidden>
+      <div class="lost-txt">
+        <h2 id="h-lost"></h2>
+        <p data-l="lost_body">Type the word below in Claude Code. Claude tells you where you are and the one next step.</p>
+      </div>
+      <div class="sayrow" id="lost-say"></div>
+    </section>
+
+    <section class="others" id="others" aria-labelledby="h-others" hidden>
+      <h2 class="sec-h" id="h-others" data-l="others_head">Other projects</h2>
+      <ul class="card olist" id="olist"></ul>
+    </section>
+
+    <noscript><p class="lead nojs"><!--ws-noscript-->Turn on JavaScript to see this page.</p></noscript>
+  </main>
+
+  <footer>
+    <span id="upd"></span>
+    <span><span data-l="footer">Made with CreateCodeBox</span> <span id="ver"></span></span>
+  </footer>
+  <span class="vh" id="copy-status" role="status"></span>
+</div>
+
+<script type="application/json" id="ws-data">/*__WS_DATA__*/null</script>
+<script type="application/json" id="ws-labels">/*__WS_LABELS__*/null</script>
+<script type="application/json" id="ws-labels-default">{
+ "loading": "Loading…",
+ "footer": "Made with CreateCodeBox",
+ "noscript": "Turn on JavaScript to see this page.",
+ "notice_sample": "A sample is shown for now.",
+ "notice_bad": "The data could not be read, so a sample is shown.",
+ "app_default": "This app",
+ "title": "Your guide",
+ "lead": "Where you are, and what to do next. This page updates by itself.",
+ "goal_head": "Your goal",
+ "goal_empty": "Not said yet",
+ "goal_for.self": "just for me",
+ "goal_for.share": "to show to others",
+ "goal_for.public-free": "public, no charge",
+ "goal_for.public-paid": "public, paid",
+ "goal_for.unknown": "not decided yet",
+ "here": "You are here",
+ "step_of": "Step {n} of 6",
+ "step.1": "Ask",
+ "step.2": "Reference",
+ "step.3": "Prototype",
+ "step.4": "Approve",
+ "step.5": "Build",
+ "step.6": "Check",
+ "hint.1": "You say what you want to make",
+ "hint.2": "You name a close site or app",
+ "hint.3": "You look, and say what is different",
+ "hint.4": "You read the plan and approve",
+ "hint.5": "Claude builds, one step at a time",
+ "hint.6": "You try it and say what worked",
+ "turn_you": "Your turn",
+ "turn_claude": "Claude is working",
+ "turn_claude_hint": "Nothing to do right now.",
+ "type_this": "Type this in Claude Code:",
+ "copy": "Copy",
+ "copied": "Copied",
+ "open_head": "Things you can open",
+ "link.prototype": "Prototype",
+ "link.design": "Design",
+ "link.table": "Table of inputs and outputs",
+ "link.plan": "Build plan",
+ "link.checks": "List of checks",
+ "link.app": "Your app",
+ "link.schedule": "Schedule of all projects",
+ "build_head": "Build",
+ "build_count": "{done} of {total} steps built",
+ "checks_head": "Checks",
+ "checks_you": "You checked {p} of {t}",
+ "checks_claude": "Claude checked {p} of {t}",
+ "goal_yes": "You said it does what you wanted.",
+ "goal_no": "You said something is still missing.",
+ "lost_head": "Not sure what to do?",
+ "lost_body": "Type the word below in Claude Code. Claude tells you where you are and the one next step.",
+ "lost_say": "help",
+ "no_project": "Tell Claude what you want to make, in one sentence. For example: I want to make a budget tracker.",
+ "others_head": "Other projects",
+ "updated": "Updated {time}",
+ "stale": "Nothing has changed for a while. If Claude Code is closed, open it again in this folder and say: continue"
+}</script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- words: English defaults, replaced by the labels the workspace passes in ---------- */
+  function readJson(id) {
+    var node = document.getElementById(id);
+    var raw = node ? node.textContent : '';
+    raw = raw.replace(/^\s*\/\*[\s\S]*?\*\/\s*/, '').trim();
+    if (!raw || raw === 'null') { return null; }
+    try { var o = JSON.parse(raw); return (o && typeof o === 'object') ? o : null; } catch (e) { return null; }
+  }
+  var L = readJson('ws-labels-default') || {}, passed = readJson('ws-labels') || {};
+  Object.keys(passed).forEach(function (k) { L[k] = passed[k]; });
+  /* a word whose key has a dot in it (the step names, the hints, the link names, who the goal is for) */
+  function W(k) { return L[k] === undefined || L[k] === null ? '' : String(L[k]); }
+  function fmt(s, kw) {
+    return String(s).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(kw, k) ? String(kw[k]) : m; });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-l]'), function (n) { if (L[n.getAttribute('data-l')] !== undefined) { n.textContent = L[n.getAttribute('data-l')]; } });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-l="lost_body"]'), function (n) { rich(n, L.lost_body); });
+  document.title = L.title;
+
+  function $(id) { return document.getElementById(id); }
+  function str(v) { return v === null || v === undefined ? '' : String(v); }
+  function num(v) { v = Number(v); return isFinite(v) && v > 0 ? Math.floor(v) : 0; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+  /* text with words in backticks: each such word becomes a <code> chip. Built from text nodes only, so the text is never read as markup. */
+  function rich(node, text) {
+    var s = String(text === undefined || text === null ? '' : text), re = /`([^`\n]+)`/g, at = 0, m;
+    while (node.firstChild) { node.removeChild(node.firstChild); }
+    while ((m = re.exec(s)) !== null) {
+      if (m.index > at) { node.appendChild(document.createTextNode(s.slice(at, m.index))); }
+      var c = document.createElement('code');
+      c.textContent = m[1];
+      node.appendChild(c);
+      at = m.index + m[0].length;
+    }
+    if (at < s.length) { node.appendChild(document.createTextNode(s.slice(at))); }
+    return node;
+  }
+
+  /* ---------- pictures: fixed shapes only, drawn here (nothing is loaded) ---------- */
+  var SVG = 'http://www.w3.org/2000/svg';
+  var ICONS = {
+    check: 'M5 12.5l4.5 4.5L19 7',
+    play: 'M8 5.5v13l11-6.5L8 5.5z',
+    out: 'M7 17L17 7M9 7h8v8',
+    copy: 'M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2',
+    person: 'M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8zM4.5 20.5c1-3.6 4-5.5 7.5-5.5s6.5 1.9 7.5 5.5',
+    folder: 'M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7z',
+    info: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM12 11v5.5M12 7.6h.01',
+    help: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM9.4 9.4a2.7 2.7 0 1 1 3.9 2.4c-.8.5-1.3 1-1.3 2M12 17h.01',
+    notyet: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM8 12h8',
+    prototype: 'M4 20l1.2-4.4L16.6 4.2a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.4 18.8 4 20zM14.5 6.5l3 3',
+    design: 'M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM3 9.5h18M9.5 9.5V20',
+    table: 'M4 8h13M13.5 4.5L17 8l-3.5 3.5M20 16H7M10.5 12.5L7 16l3.5 3.5',
+    plan: 'M9.5 6h10.5M9.5 12h10.5M9.5 18h10.5M4.5 6h.01M4.5 12h.01M4.5 18h.01',
+    checks: 'M3.5 6.5l1.7 1.7L8.5 5M3.5 16.5l1.7 1.7L8.5 15M12.5 7H20M12.5 17H20',
+    app: 'M6 3.5h12a2.5 2.5 0 0 1 2.5 2.5v12a2.5 2.5 0 0 1-2.5 2.5H6A2.5 2.5 0 0 1 3.5 18V6A2.5 2.5 0 0 1 6 3.5zM10 8.5v7l5.8-3.5L10 8.5z',
+    schedule: 'M5 5h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM3 10h18M8 3v4M16 3v4'
+  };
+  function icon(name, solid) {
+    var s = document.createElementNS(SVG, 'svg'), p = document.createElementNS(SVG, 'path');
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('class', 'ic' + (solid ? ' solid' : ''));
+    s.setAttribute('aria-hidden', 'true');
+    s.setAttribute('focusable', 'false');
+    p.setAttribute('d', ICONS[name] || ICONS.out);
+    s.appendChild(p);
+    return s;
+  }
+
+  /* ---------- the data ---------- */
+  var KINDS = ['answer', 'say', 'look', 'check', 'wait', 'done'];
+  var LINK_IDS = ['prototype', 'design', 'table', 'plan', 'checks', 'app', 'schedule'];
+  var DEFAULT_DATA = {
+    generated: '2026-11-10 14:03:22', version: '0.5.0', turn: 'you',
+    project: {
+      slug: '01_coffee', name: 'Coffee log',
+      goal: 'A page where I log each coffee I drink and see this week\'s total', goal_for: 'self', step: 3,
+      next: { kind: 'say', text: 'Look at the design in your browser. Tell Claude what to change. When it is right, type the words below.', say: 'looks good' },
+      links: [{ id: 'prototype', href: '01_coffee/design/ui/sketch.html' }, { id: 'design', href: '01_coffee/design/ui/index.html' }, { id: 'schedule', href: 'schedule.html' }],
+      build: { done: 0, total: 0 },
+      checks: { you_pass: 0, you_total: 0, claude_pass: 0, claude_total: 0 },
+      goal_reached: null
+    },
+    others: []
+  };
+
+  /* a link may only point to a file next to this page: a relative path, no scheme, no way up or out */
+  function safeHref(h) {
+    h = str(h).replace(/^\s+|\s+$/g, '');
+    if (!h || h.indexOf(':') >= 0 || /^[\/\\]/.test(h) || /[\u0000-\u001f]/.test(h)) { return ''; }
+    var parts = h.replace(/\\/g, '/').split('/');
+    for (var i = 0; i < parts.length; i++) { if (parts[i] === '..') { return ''; } }
+    return parts.map(encodeURIComponent).join('/');
+  }
+  function norm(d) {
+    if (!d || typeof d !== 'object' || !('project' in d)) { return null; }
+    var out = { generated: str(d.generated), version: str(d.version), turn: d.turn === 'claude' ? 'claude' : 'you', project: null, others: [] };
+    var p = d.project;
+    if (p && typeof p === 'object') {
+      var nx = (p.next && typeof p.next === 'object') ? p.next : {};
+      var b = (p.build && typeof p.build === 'object') ? p.build : {}, c = (p.checks && typeof p.checks === 'object') ? p.checks : {};
+      out.project = {
+        name: str(p.name) || L.app_default,
+        goal: str(p.goal).replace(/^\s+|\s+$/g, ''),
+        goal_for: str(p.goal_for),
+        step: Math.min(6, Math.max(1, num(p.step))),
+        next: { kind: KINDS.indexOf(str(nx.kind)) >= 0 ? str(nx.kind) : 'answer', text: str(nx.text), say: str(nx.say).replace(/^\s+|\s+$/g, '') },
+        links: (Array.isArray(p.links) ? p.links : []).map(function (l) {
+          l = l || {};
+          return { id: str(l.id), href: safeHref(l.href) };
+        }).filter(function (l) { return l.href && LINK_IDS.indexOf(l.id) >= 0; }),
+        build: { done: Math.min(num(b.done), num(b.total)), total: num(b.total) },
+        checks: { you_pass: Math.min(num(c.you_pass), num(c.you_total)), you_total: num(c.you_total),
+          claude_pass: Math.min(num(c.claude_pass), num(c.claude_total)), claude_total: num(c.claude_total) },
+        goal_reached: p.goal_reached === true ? true : (p.goal_reached === false ? false : null)
+      };
+    }
+    if (!out.project && d.next && typeof d.next === 'object') {
+      /* no project is chosen: the workspace still sends the one next step (continue or new) */
+      out.next = { kind: KINDS.indexOf(str(d.next.kind)) >= 0 ? str(d.next.kind) : 'answer', text: str(d.next.text),
+        say: str(d.next.say).replace(/^\s+|\s+$/g, '') };
+    }
+    out.others = (Array.isArray(d.others) ? d.others : []).map(function (o) {
+      o = o || {};
+      return { name: str(o.name) || str(o.slug), step: Math.min(6, Math.max(1, num(o.step))) };
+    }).filter(function (o) { return o.name; });
+    return out;
+  }
+
+  var raw = readJson('ws-data'), state = 'ok', data = null;
+  if (raw === null) { state = 'default'; } else { data = norm(raw); if (!data) { state = 'bad'; } }
+  if (!data) { data = norm(DEFAULT_DATA); }
+  var notice = $('notice');
+  if (state === 'default') { notice.textContent = L.notice_sample; notice.hidden = false; }
+  if (state === 'bad') { notice.textContent = L.notice_bad; notice.hidden = false; }
+
+  var still = false;
+  try { still = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { /* old browser: it moves */ }
+
+  /* ---------- the exact words and the Copy button ---------- */
+  function selectNode(n) {
+    try { var r = document.createRange(); r.selectNodeContents(n); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) { /* the words stay readable */ }
+  }
+  function copyText(text, done) {
+    function old() {
+      var ok = false, ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      done(ok);
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done(true); }, old);
+        return;
+      }
+    } catch (e) { /* go on with the old way */ }
+    old();
+  }
+  function sayChip(text, id) {
+    var c = el('code', 'say'), pr = el('i', '', '›'), w = el('span', '', text);
+    pr.setAttribute('aria-hidden', 'true');
+    w.id = id;
+    c.appendChild(pr); c.appendChild(w);
+    return c;
+  }
+  function copyButton(text, id, quiet) {
+    var b = el('button', 'copy' + (quiet ? ' quiet' : '')), a = el('span', 'cp-a'), z = el('span', 'cp-z'), timer = 0;
+    b.type = 'button';
+    b.setAttribute('aria-describedby', id);
+    a.appendChild(icon('copy')); a.appendChild(el('span', '', L.copy));
+    z.appendChild(icon('check')); z.appendChild(el('span', '', L.copied));
+    b.appendChild(a); b.appendChild(z);
+    b.addEventListener('click', function () {
+      copyText(text, function (ok) {
+        if (!ok) { var w = $(id); if (w) { selectNode(w); } return; }
+        b.classList.add('ok');
+        $('copy-status').textContent = L.copied;
+        window.clearTimeout(timer);
+        timer = window.setTimeout(function () { b.classList.remove('ok'); $('copy-status').textContent = ''; }, 1500);
+      });
+    });
+    return b;
+  }
+  function openLink(l, cls, big) {
+    var a = el('a', cls);
+    a.setAttribute('href', l.href);
+    a.setAttribute('target', '_blank');
+    a.setAttribute('rel', 'noopener');
+    if (big) {
+      var t = el('span', 'lk-ic'); t.appendChild(icon(l.id)); a.appendChild(t);
+      a.appendChild(el('span', 'lk-t', W('link.' + l.id)));
+    } else {
+      a.appendChild(icon(l.id));
+      a.appendChild(el('span', '', W('link.' + l.id)));
+    }
+    a.appendChild(icon('out'));
+    return a;
+  }
+
+  /* ---------- the path: six steps, made once; only their state changes ---------- */
+  var pathBox = $('path'), cursor = $('cursor'), pin = $('pin'), steps = [], curStep = 0;
+  pin.textContent = L.here;
+  for (var i = 1; i <= 6; i++) {
+    var li = el('li', 'step todo'), dot = el('span', 'dot'), body = el('span', 'st-body'), here = el('span', 'vh');
+    dot.setAttribute('aria-hidden', 'true');
+    dot.appendChild(el('b', '', String(i))); dot.appendChild(icon('check'));
+    body.appendChild(el('span', 'st-name', W('step.' + i)));
+    body.appendChild(here);
+    body.appendChild(el('span', 'st-hint', W('hint.' + i)));
+    li.appendChild(dot); li.appendChild(body);
+    $('steps').appendChild(li);
+    steps.push({ li: li, here: here });
+  }
+  function placeCursor(move) {
+    var s = steps[curStep - 1];
+    if (!s || pathBox.hidden) { cursor.classList.remove('on'); return; }
+    if (!move) { pathBox.classList.add('snap'); }
+    pathBox.style.setProperty('--pinw', pin.offsetWidth + 'px');
+    cursor.style.setProperty('--y', s.li.offsetTop + 'px');
+    cursor.style.setProperty('--h', s.li.offsetHeight + 'px');
+    cursor.classList.add('on');
+    if (!move) { void cursor.offsetWidth; pathBox.classList.remove('snap'); }
+  }
+  function setPath(step, allDone, move) {
+    curStep = step;
+    steps.forEach(function (s, k) {
+      var n = k + 1, cur = n === step;
+      s.li.className = 'step ' + ((allDone || n < step) ? 'done' : (cur ? 'now' : 'todo')) + (cur ? ' cur' : '');
+      if (cur) { s.li.setAttribute('aria-current', 'step'); } else { s.li.removeAttribute('aria-current'); }
+      s.here.textContent = cur ? ' (' + L.here + ') ' : '';
+    });
+    $('h-path').textContent = fmt(L.step_of, { n: step });
+    placeCursor(move);
+  }
+  if (window.ResizeObserver) { new window.ResizeObserver(function () { placeCursor(false); }).observe($('steps')); }
+  window.addEventListener('resize', function () { placeCursor(false); });
+
+  /* ---------- the turn card ---------- */
+  /* which pages the next step talks about: they get a button inside the card */
+  var NEAR = { '3look': [['prototype']], '3say': [['design', 'prototype']], '4say': [['table'], ['design']],
+    '6check': [['app'], ['checks']], '6answer': [['app']], '6done': [['app']] };
+  function turnView(d) {
+    var p = d.project, nx = p ? p.next : ((d.next && d.next.text) ? d.next : { kind: 'answer', text: L.no_project, say: '' });
+    if (d.turn === 'claude' || nx.kind === 'wait') {
+      return { state: 'claude', text: nx.kind === 'wait' ? nx.text : '', say: '', links: [] };
+    }
+    var links = [];
+    if (p) {
+      (NEAR[p.step + nx.kind] || []).forEach(function (ids) {
+        for (var k = 0; k < ids.length; k++) {
+          var hit = p.links.filter(function (l) { return l.id === ids[k]; })[0];
+          if (hit) { links.push(hit); return; }
+        }
+      });
+    }
+    return { state: nx.kind === 'done' ? 'done' : 'you', text: nx.text, say: nx.kind === 'done' ? '' : nx.say, links: links };
+  }
+  function buildTurn(v) {
+    var box = el('div', 'tl'), h, t;
+    if (v.state === 'done') {
+      var row = el('div', 't-done'), ok = el('span', 'okmark');
+      ok.setAttribute('aria-hidden', 'true'); ok.appendChild(icon('check'));
+      t = rich(el('p', 't-text'), v.text); t.id = 'h-turn';
+      row.appendChild(ok); row.appendChild(t);
+      box.appendChild(row);
+    } else if (v.state === 'claude') {
+      h = el('h2', 't-head'); h.id = 'h-turn';
+      var dots = el('span', 'dots'); dots.setAttribute('aria-hidden', 'true');
+      dots.appendChild(el('i')); dots.appendChild(el('i')); dots.appendChild(el('i'));
+      h.appendChild(dots); h.appendChild(el('span', '', L.turn_claude));
+      box.appendChild(h);
+      if (v.text) { box.appendChild(rich(el('p', 't-text'), v.text)); }
+      box.appendChild(el('p', 't-hint', L.turn_claude_hint));
+      var st = el('p', 't-stale'); st.id = 'stale'; st.hidden = true;
+      st.appendChild(icon('info')); st.appendChild(el('span', '', L.stale));
+      box.appendChild(st);
+    } else {
+      h = el('h2', 't-head'); h.id = 'h-turn';
+      var badge = el('span', 'badge');
+      badge.appendChild(icon('play', true)); badge.appendChild(el('span', '', L.turn_you));
+      h.appendChild(badge);
+      box.appendChild(h);
+      box.appendChild(rich(el('p', 't-text'), v.text));
+    }
+    if (v.links.length) {
+      var tl = el('div', 't-links');
+      v.links.forEach(function (l) { tl.appendChild(openLink(l, 'tbtn' + (v.state === 'done' ? ' main' : ''), false)); });
+      box.appendChild(tl);
+    }
+    if (v.say) {
+      var sy = el('div', 't-say'), sr = el('div', 'sayrow');
+      sy.appendChild(el('p', 't-label', L.type_this));
+      sr.appendChild(sayChip(v.say, 'say-words')); sr.appendChild(copyButton(v.say, 'say-words', false));
+      sy.appendChild(sr);
+      box.appendChild(sy);
+    }
+    return box;
+  }
+  var turnBox = $('turn'), turnKey = '', view = null, swapTimer = 0;
+  function setTurn(v, move) {
+    var key = JSON.stringify(v);
+    view = v;
+    if (key === turnKey) { return; }
+    turnKey = key;
+    var olds = Array.prototype.slice.call(turnBox.children), next = buildTurn(v);
+    var h0 = turnBox.offsetHeight;
+    turnBox.hidden = false;
+    turnBox.className = 'turn is-' + v.state;
+    window.clearTimeout(swapTimer);
+    if (!move || still || !olds.length) {
+      turnBox.textContent = ''; turnBox.style.height = '';
+      turnBox.appendChild(next);
+      return;
+    }
+    olds.forEach(function (o, k) {
+      if (k < olds.length - 1) { turnBox.removeChild(o); return; }
+      o.className = 'tl out'; o.setAttribute('aria-hidden', 'true');
+      Array.prototype.forEach.call(o.querySelectorAll('[id]'), function (n) { n.removeAttribute('id'); });
+    });
+    next.className = 'tl in';
+    turnBox.appendChild(next);
+    turnBox.style.height = '';
+    var h1 = turnBox.offsetHeight;
+    turnBox.style.height = h0 + 'px';
+    void turnBox.offsetWidth;
+    turnBox.style.height = h1 + 'px';
+    swapTimer = window.setTimeout(function () {
+      Array.prototype.slice.call(turnBox.children).forEach(function (o) { if (o !== next) { turnBox.removeChild(o); } });
+      next.className = 'tl';
+      turnBox.style.height = '';
+    }, 460);
+  }
+
+  /* ---------- the rest of the page ---------- */
+  function clear(n) { n.textContent = ''; return n; }
+  function bar(id, part, whole) { $(id).style.setProperty('--w', (whole ? Math.round(part * 1000 / whole) / 10 : 0) + '%'); }
+  function shortTime(g) {
+    var m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/.exec(g), n = new Date();
+    if (!m) { return g; }
+    return m[1] === n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate()) ? m[2] : m[1] + ' ' + m[2];
+  }
+  function madeAt(g) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(g);
+    var t = m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)).getTime() : NaN;
+    return (isFinite(t) && t <= Date.now()) ? t : Date.now();
+  }
+  var lostMade = false, linksKey = '';
+  function render(d, move) {
+    var p = d.project;
+    $('goal').hidden = !p; pathBox.hidden = !p; $('proj').hidden = !p;
+    $('hero').className = 'hero' + (p ? '' : ' solo');
+
+    if (p) {
+      var pj = clear($('proj'));
+      pj.appendChild(icon('folder')); pj.appendChild(el('span', '', p.name));
+      pj.title = p.name;
+      var gt = $('goal-text');
+      gt.textContent = p.goal || L.goal_empty;
+      gt.className = 'goal-text' + (p.goal ? '' : ' none');
+      var gf = clear($('goal-for')), who = W('goal_for.' + p.goal_for);
+      gf.hidden = !who;
+      if (who) { gf.appendChild(icon('person')); gf.appendChild(el('span', '', who)); }
+    }
+
+    setTurn(turnView(d), move);
+    if (p) { setPath(p.step, p.next.kind === 'done', move); }
+
+    var b = p ? p.build : { done: 0, total: 0 }, c = p ? p.checks : { you_pass: 0, you_total: 0, claude_pass: 0, claude_total: 0 };
+    var reached = p ? p.goal_reached : null;
+    $('pg-build').hidden = !b.total;
+    $('pg-you').hidden = !c.you_total;
+    $('pg-claude').hidden = !c.claude_total;
+    $('pg-checks').hidden = !(c.you_total || c.claude_total);
+    $('pg-goal').hidden = reached === null;
+    $('prog').hidden = !(b.total || c.you_total || c.claude_total || reached !== null);
+    $('pg-build-n').textContent = fmt(L.build_count, { done: b.done, total: b.total });
+    $('pg-you-n').textContent = fmt(L.checks_you, { p: c.you_pass, t: c.you_total });
+    $('pg-claude-n').textContent = fmt(L.checks_claude, { p: c.claude_pass, t: c.claude_total });
+    bar('pg-build-b', b.done, b.total); bar('pg-you-b', c.you_pass, c.you_total); bar('pg-claude-b', c.claude_pass, c.claude_total);
+    if (reached !== null) {
+      var pg = clear($('pg-goal'));
+      pg.className = 'pg-goal ' + (reached ? 'yes' : 'no');
+      pg.appendChild(icon(reached ? 'check' : 'notyet'));
+      pg.appendChild(el('span', '', reached ? L.goal_yes : L.goal_no));
+    }
+
+    /* the app first: it is the thing the person came for */
+    var links = p ? p.links.filter(function (l) { return l.id === 'app'; }).concat(p.links.filter(function (l) { return l.id !== 'app'; })) : [];
+    var lk = JSON.stringify(links);
+    if (lk !== linksKey) {
+      linksKey = lk;
+      var box = clear($('links'));
+      links.forEach(function (l) { box.appendChild(openLink(l, 'lk' + (l.id === 'app' ? ' app' : ''), true)); });
+    }
+    $('open').hidden = !links.length;
+
+    if (!lostMade) {
+      lostMade = true;
+      var lh = $('h-lost');
+      lh.appendChild(icon('help')); lh.appendChild(el('span', '', L.lost_head));
+      $('lost-say').appendChild(sayChip(L.lost_say, 'lost-words'));
+      $('lost-say').appendChild(copyButton(L.lost_say, 'lost-words', true));
+      $('lost').hidden = false;
+    }
+
+    var ol = clear($('olist')), others = d.others;
+    others.forEach(function (o) {
+      var row = el('li');
+      row.appendChild(el('span', 'o-name', o.name));
+      row.appendChild(el('span', 'o-step', fmt(L.step_of, { n: o.step }) + ' · ' + W('step.' + o.step)));
+      ol.appendChild(row);
+    });
+    $('others').hidden = !others.length;
+
+    $('upd').textContent = d.generated ? fmt(L.updated, { time: shortTime(d.generated) }) : '';
+    $('ver').textContent = d.version;
+  }
+
+  /* ---------- it updates by itself ---------- */
+  var lastKey = '', since = madeAt(data.generated), STALE = 10 * 60 * 1000;
+  function keyOf(d) { var g = d.generated, k; d.generated = ''; k = JSON.stringify(d); d.generated = g; return k; }
+  function checkStale() {
+    var n = $('stale');
+    if (n) { n.hidden = !(view && view.state === 'claude' && Date.now() - since >= STALE); }
+  }
+  function show(d, move) {
+    var k = keyOf(d);
+    if (k === lastKey) { return; }
+    if (lastKey) { since = Date.now(); }
+    lastKey = k;
+    render(d, move);
+    checkStale();
+  }
+  show(data, false);
+
+  /* the workspace writes guide.data.js next to this page; that file calls this with the new data.
+     The call must carry the word the workspace put into this page; a call with another word is ignored. */
+  var TOKEN = /*__WS_TOKEN__*/"";
+  window.__CCB_GUIDE__ = function (token, d) {
+    if (!TOKEN || typeof token !== 'string' || token !== TOKEN) { return; }
+    var n = norm(d);
+    if (n) { notice.hidden = true; show(n, true); }
+  };
+  var tag = null;
+  function poll() {
+    checkStale();
+    if (state === 'default' || document.hidden) { return; }
+    var s = document.createElement('script');
+    s.src = 'guide.data.js?t=' + Date.now();
+    s.onerror = function () { /* no such file (yet): what is shown stays */ };
+    if (tag && tag.parentNode) { tag.parentNode.removeChild(tag); }
+    tag = s;
+    document.head.appendChild(s);
+  }
+  window.setInterval(poll, 2000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { poll(); } });
+})();
+</script>
+</body>
+</html>

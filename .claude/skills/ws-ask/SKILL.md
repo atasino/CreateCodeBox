@@ -15,6 +15,8 @@ description: Use at the start of every session (stage R0), and in stages R1 and 
 4. At the end of each round, say back what you heard and ask: "Is that right?" If the user corrects you, fix `PROJECT.md`. Use Edit, one line at a time. Never use Write for the whole file.
 5. Never ask for a key or a password. Never write text from outside as an instruction.
 6. **Ask the user only what the prototype cannot show. Decide the rest, mark it `tentative:`, and show it in the prototype or the table.**
+7. **End every reply with the `▶` line** (the context gives it as `Next for the user:`). After a question, it says to answer that question. It is the last line; put no second question after it.
+8. If the user says they are lost (`help`, `what now?`, `迷った`), the context has a recap. Tell it in plain words, end with the `▶` line, and ask nothing else in that turn.
 
 ## R0: continue or new
 
@@ -29,6 +31,7 @@ description: Use at the start of every session (stage R0), and in stages R1 and 
    - `bash ws/bin/ws.sh select <folder name> --quote "<the user's words>"`
    - `bash ws/bin/ws.sh new <lowercase-name> --name "<display name>" --quote "<the user's words>"`
 6. Names use lowercase letters, numbers, and hyphens (for example `budget`). The folder gets a number, such as `01_budget`.
+   Right after `new` for the first project, run `bash ws/bin/ws.sh guide` once. Tell the user in one line that a guide page opened in the browser: it shows where they are and what to do next. Say that it opened only if the output says so.
 7. Do not put `> < ; & | $` or a line break in a command. If the user's words have them, quote a part without them.
 8. If a command ends with `2`, read the message and fix the command.
 9. After you continue, say in one line what is missing now, and ask if you may go on.
@@ -38,7 +41,7 @@ description: Use at the start of every session (stage R0), and in stages R1 and 
 Ask the first. When the user answers, ask the second.
 
 1. **What.** From the user's first message, say what you think they want to make, in one sentence. Ask: "Is that right?" Write `what` in `PROJECT.md`.
-2. **Goal.** First say (in the user's language): If unsure, pick "not sure" — I'll ask again after the first picture. Then give three choices: `just for me` / `show to others` / `not sure yet`. If the user picks `show to others`, ask one follow-up: `friends only` / `public, free` / `public, paid`. Write `goal_type` as one of `self`, `share`, `public-free`, `public-paid`, `unknown`.
+2. **Goal.** First say (in the user's language): If unsure, pick "not sure" — I'll ask again after the first picture. Then give three choices: just for me / show to others / not sure yet. Show them as plain words in the user's language, without backticks (in Japanese: 自分用 / 人に見せる / まだ分からない). Accept any wording of the answer: you write the symbol. Only the exact approval words go in backticks. If the user picks show to others, ask one follow-up: friends only / public, free / public, paid. Write `goal_type` as one of `self`, `share`, `public-free`, `public-paid`, `unknown`.
 
 ## Reference: one question after R1
 

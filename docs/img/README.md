@@ -16,6 +16,7 @@ The README and the setup pages refer to these names. The pictures of how it work
 | `icon.svg` | The icon: three boxes of the same size on a blue ground, each half behind the one before, going up to the right. The low-left box is white and in front. The one at the back is amber. | 512 × 512 | Drawn by hand as SVG (shape chosen from six local-model sketches; the sketches are not kept here). | Planned: next to the title in README.md and README.ja.md |
 | `icon-mono.svg` | The same, in one colour (`#1d2330`) on a transparent ground. The gaps show the three boxes. | 512 × 512 | Drawn by hand as SVG. | Planned: places that need one colour |
 | `icon-32.svg`, `icon-16.svg` | Small versions of the icon for favicons. Same shape, drawn on the pixel grid so the edges stay sharp. | 32 × 32, 16 × 16 | Drawn by hand as SVG. | Planned: favicon |
+| `guide-en.png`, `guide-ja.png` | The guide page (`projects/guide.html`) at step 3 of 6, in English and in Japanese: the goal, the six steps with "You are here", "Your turn" with the words to type and a Copy button, and the pages you can open. | 1280 × 860 | Screenshots of the real page from two test runs of version 0.5.0 (a habit tracker in English, a packing checklist in Japanese), taken with Chromium without a window, light theme. No person's data is on them. | README.md, README.ja.md |
 
 Colours come from `ws/learn/overview.html`: ground `#1d2330` (dark) and `#f7f8fa` (light), blue `#2457d6` and `#8fb0ff`, amber `#ffb55e` for "your turn" only.
 

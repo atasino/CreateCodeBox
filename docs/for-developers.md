@@ -54,6 +54,9 @@ npm start
 - `st route <ID> user|ai --reason <text>` changes who checks a case. Use `ai` only for a case you truly cannot trigger by hand, such as a monthly job. The older `CI` and `UT` routes are gone.
 - `st mark <ID> pass --by ai --shot <image>` works only for cases that Claude checks. It accepts an image only if it is under `projects/<name>/` and was made after the session started.
 - You answer your own cases by number: `st mark numbered pass --by user`. The message must have the numbers from the last `st list --numbered`, for example `1, 2 pass` or `1-3 pass`.
+- Who checks a new case (`case_who`): you check the normal case (`N`) of a row a person can trigger. Every empty or edge case (`B`), every failure case (`F`), and every case of a `scheduled` row is Claude's. A list that exists keeps the `who` of its cases; `st route` changes one.
+- `st list --numbered` shows only your cases, numbered from 1, and one line that counts Claude's. `st list` shows all of them.
+- In a numbered answer (`read_answer`), a number is recorded as passed only when a positive word belongs to it: in `1, 2 and 4 worked; 3 did not`, 1, 2 and 4 are recorded and 3 is named as not recorded. A range (`1-7`, `1 to 7`, `1 through 7`, `1から7まで`) is every number in it. A number with no such word is named too. `all worked` (sent within three messages of the list) records every case of the numbered list; `all pass but 3` records all of them except 3. Only numbers of the last numbered list count, and only the part of a sentence before a colon is read.
 - Evidence: `--evidence <text>`, `--evidence -` (standard input), or `--evidence-file <path>`. If the text has any of `> < ; & | $`, the hook stops the command. Write the text in a file and use `--evidence-file`.
 
 ## Task board
@@ -75,15 +78,44 @@ bash ws/bin/ws.sh tasks gantt [--text]
 - Session start adds one line for each project and the open items of the active one. Every prompt adds the open items of the active project (5 lines at most), the open counts of the others, and the triage line, in about 700 characters at most.
 - **Triage.** After approval (RS, RUN, DONE), a message that is not a plain yes, an approval word, check numbers, or continue / new must be sorted: `task add`, `task set` or `task date`, or `task none`. Until then the gate refuses edits (`Edit`, `Write`, `MultiEdit`, `NotebookEdit`, `apply_patch`), MCP write tools, and any Bash command that is not read-only. `ws.sh task`, `tasks`, `status`, `list`, `select`, `new` and the other read commands still run. `Stop` blocks once if the message is still not sorted. Before approval nothing is enforced: you get a one-line reminder.
 
+## The next step, the guide page, and the goal answer
+
+```
+bash ws/bin/ws.sh next
+bash ws/bin/ws.sh where
+bash ws/bin/ws.sh guide
+```
+
+- `next` prints the one thing the user does next (`Next for the user: …`, and `Exact words: …` when a word must be typed). It is `next_step()` in `ws/engine.py`: a kind (`answer`, `say`, `look`, `check`, `wait`, `done`), a sentence from `ws/lang/` (keys `next.*`), and the exact word or nothing. The hooks put the same lines in the context at session start and with every prompt, with the rule about the `▶` line.
+- `Stop` blocks once for each user message when the last reply has no line that starts with `▶` (spaces, `*`, `_`, a backtick, `>`, `#`, a list dash or a list number may come first). It does not block when the reply cannot be read, or when `stop_hook_active` is set. If the triage also applies, both texts are in the one answer.
+- `Stop` also blocks once for each user message when the next step is `wait` (the missing thing is Claude's own work): the reply is held and Claude is told to go on (`stop.wait`). Not in the first prompt of a session at RUN, which is read-only. `wait` is given only while a reply runs (`turn: claude` in the session, from a prompt until a Stop passes). Outside a reply, the same state gives `say` with the word `continue`, so `ws.sh next`, `where` and the guide page never tell a user to wait for work that nobody is doing. Every SessionStart source sets `turn` back to `you`; `ws.sh` commands do not change it.
+- `where` prints the recap for a user who is lost: goal, step (1 to 6), what is done, the next step. A short message from the lists in `ws/lang/synonyms.py` (`help`, `what now?`, `迷った` …) puts the same recap in the context. The session counts these messages (`lost`).
+- The finish word: at RUN, when `src/index.html` exists and every case the user checks has passed, the user's own message `finish` (the exact words are in `ws/engine.py`, `FINISH_EN` and `FINISH_RE`) writes `.ws/accept_<slug>.json`, a signed record with the hash of the design. While it is valid, the stage is DONE even with open build rows or open cases of Claude's. `status`, `where` and `st list` then say how many were left. Nothing but the prompt hook writes it.
+- `guide` writes `projects/guide.html` and `projects/guide.data.js`, opens the page (`CREATECODEBOX_OPEN_DRY_RUN=1` only says what it would open), and sets `guide_opened` in `.ws/state.json`. Until then, the context of each turn asks Claude to run it once. The data is `guide_data()`; its shape is `ws/render/sample_guide.json`. The template and the label rules are in `ws/render/README.md`. The same two files are written by the hooks and after each `ws.sh` command that prints a result, only when the content changed. The edit tools and the Read tool are refused for both files, and so is a shell command that names them (in any letter case). A shell command that names `schedule.html` is refused in the same way. The data file calls the page with a word made from the signing key in `~/.createcodebox` and the workspace path (`guide_token()`: the first 16 hex characters of an HMAC; it is not stored); the page ignores a call with another word.
+- The goal answer is `.ws/goal_<slug>.json`, a signed record: `reached` (true or false), the hash of the design it belongs to, and the user's words. It is written only from the user's own prompt, at stage DONE. The question is open for exactly one message, and only after a Stop passed on a reply that named both answers (`goal_question_in`). Then a plain yes (`GOAL_YES_*` in `ws/lang/synonyms.py`) or a plain not yet (`GOAL_NO_*`) is recorded, and the latest answer replaces the one before. Without an open question, only two things change a record: after not yet, a short "it's finished"; after yes, a plain "not yet" or a short "it is not what I wanted". A change of the design makes it count for nothing. `status`, `st list` and `where` show it.
+
+## Try a page without a window
+
+```
+bash ws/bin/ws.sh try <page.html> [--before <file.js>] [--after <file.js>] [--shot <out.png>] [--size WxH] [--wait <ms>]
+```
+
+- The page must be an `.html` file in the active project's `src/` (from RUN on) or `design/` (from R2 on). The script files must be inside `projects/<slug>/`. The picture must be a `.png` inside `projects/<slug>/`, but not in `design/evidence/`. The default is `projects/<slug>/evidence/try-<time>.png`. An argument with `://` is refused.
+- It looks for a Chromium-family browser and installs nothing: on a Mac, Chrome, Edge, Chromium or Brave in `/Applications` or `~/Applications`; on Windows, `chrome.exe` or `msedge.exe` under `%ProgramFiles%`, `%ProgramFiles(x86)%` or `%LocalAppData%`; elsewhere, `google-chrome`, `google-chrome-stable`, `chromium`, `chromium-browser`, `microsoft-edge` or `brave-browser` on the `PATH`. `CREATECODEBOX_BROWSER` (a path) overrides the search. With none, the exit code is 3.
+- It writes a copy of the page next to it (`.ccb-try-<pid>.html`, removed afterwards). In the copy, the `--before` code is the first script in `<head>`, and the `--after` code runs after `load`, inside an async function. What that function returns, an error it throws, and the `console.log` lines come back as JSON.
+- The browser runs twice on that copy, each time with a new temporary profile folder: once with `--dump-dom`, once with `--screenshot`. The flags are `--headless=new` (then `--headless` if that did not work), `--no-first-run`, `--no-default-browser-check`, `--disable-gpu`, `--hide-scrollbars`, `--window-size` and `--virtual-time-budget` (`--wait`, 3000 by default). Each run is killed after 60 seconds. No shell is used.
+- It prints the browser's name, the result, the console lines, the first 1,500 characters of the text on the page (scripts, styles, tags and hidden elements left out), and the path of the picture. Exit code 0 when the page loaded and the `--after` code did not throw, else 1.
+- The picture can be the evidence of a case that Claude checks: `st mark <ID> pass --by ai --shot <png>`. At DONE, Claude's own cases can still be marked again this way, or with `st run`; the user's cases cannot.
+
 ## Tools outside the gates
 
 The hooks check Claude's own tools: file edits, Bash, Read, Grep, and Glob. In Codex, they check its edit tool `apply_patch` and its shell (see [codex-notes.md](codex-notes.md)). The hook looks at tool names that contain "gakaso" (Gakaso is our own product). It lets only read-type names through before a design exists. Some tool names contain write, edit, patch, apply, create, delete, move or rename. A built-in tool with such a name that the hook does not know is always refused. An MCP tool with such a name (for example `mcp__tracker__create_issue`) is refused until the build stage, after approval. After that, it is not restricted. Other unknown tools are not restricted by these gates. The hook goes by the name only. It cannot tell what an MCP tool really does. If you add an MCP server, you decide what it can do. Pass keys to it with `ws/bin/mcp_env.py`, not with `claude mcp add -e KEY=value`. See `.claude/skills/ws-secrets/SKILL.md`.
 
 ## Records and language
 
-- Records are in `.ws/`: `st_<slug>.json` (test cases), `schedule_<slug>.json`, `tasks_<slug>.json` (the task board), `repo_<slug>.json`, `secret_allow.json`, `excludes.json`, and `lang`. The `design/` folder holds only the HTML pages. If the signing key is missing, records are unsigned and you get a warning. Your progress is kept.
+- Records are in `.ws/`: `st_<slug>.json` (test cases), `schedule_<slug>.json`, `tasks_<slug>.json` (the task board), `accept_<slug>.json` (the user's word to finish), `goal_<slug>.json` (the goal answer), `repo_<slug>.json`, `secret_allow.json`, `excludes.json`, and `lang`. The `design/` folder holds only the HTML pages. If the signing key is missing, records are unsigned and you get a warning. Your progress is kept.
 - Language: `.ws/lang`, then the environment variable `CREATECODEBOX_LANG`, then English. If `CREATECODEBOX_LANG` is set, the language is not saved from your first message. Run `bash ws/bin/ws.sh lang set en` (or `ja`) to change it.
-- `bash ws/bin/ws.sh open <path>` opens a file under `design/` or `src/` (html, png, svg, or pdf). The path starts from the workspace root.
+- `bash ws/bin/ws.sh open <path>` opens a file under `design/` or `src/` (html, png, svg, or pdf), or one of the two pages for all projects: `projects/schedule.html` and `projects/guide.html`. The path starts from the workspace root.
 - `bash ws/bin/ws.sh resign` signs the records again. Claude runs it only after you type `resign`.
 
 ## Run the tests

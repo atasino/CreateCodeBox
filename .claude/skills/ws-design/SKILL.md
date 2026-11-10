@@ -9,6 +9,8 @@ description: Use after R1 to make and open the rough sketch, in R2 and R3 to des
 
 Words the user sees (the prototype, the look, the table) follow `ws/style/plain-words.<lang>.md` (the language of the user's latest message).
 
+The last line of every reply is the `▶` line from the context (`Next for the user:`). When the design or the table waits for the user's word, that line gives the exact word to type (`Exact words:`). Never type it for the user. After a record or a file changes the stage, run `bash ws/bin/ws.sh next` and use what it prints. The guide page (`projects/guide.html`) links to the prototype, the design, and the table once they exist.
+
 ## 1. The prototype (after the reference question)
 
 Ask the user only what the prototype cannot show. Decide the rest, mark it `tentative:`, and show it in the prototype or the table.
@@ -46,6 +48,15 @@ A skeleton to start from (no reference):
 If the user writes in another language, translate the words that people see, including the top line. Keep the mark `data-ccb="sketch"` as it is.
 
 ## 2. The look (R3, only if there is a screen)
+
+**The design is the finished look.** The first picture is rough and grey on purpose: it is a question, not a design. The design (`design/ui/index.html`) is what the app will look like, in colour:
+
+- Start from `ws/templates/look.css`: copy the whole block inline into the page's `<style>` (read `ws/templates/look.md`). The file must still open by double-click, with no outside loads.
+- Choose ONE accent colour that suits the purpose, and say why in `brief.md` under `## Colors`: the accent, the neutrals, and one status colour. Three at most, as before.
+- Large readable text, big buttons, a kind empty state, a clear error notice, and real-looking example data from the user's words.
+- With a reference: keep its layout and flow. Never copy its colours, logo, text or pictures.
+- When you show it, the first sentence is: "This is how your app will look."
+- `builder` keeps the approved look exactly. If something must look different, go back to the design.
 
 1. **The brief comes first.** The look grows from the prototype. Keep its layout and flow. `designer` writes `design/ui/brief.md` with these headings: `## Purpose`, `## Layout`, `## Colors` (3 at most), `## Text`, `## States` (empty and error). If one heading is empty, the workspace says it is missing. Never draw without the brief.
 2. `designer` makes `design/ui/index.html`: one file, no outside loads. Open it with `ws.sh open`.

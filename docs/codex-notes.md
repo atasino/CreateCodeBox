@@ -71,6 +71,11 @@ An `AGENTS.md` inside imported code (`projects/<name>/src/`) is not read when Co
   (RUN, DONE), and in the first turn of a session; after that the user decides what an added server may do. For example `mcp__tracker__create_issue` is refused at R1 and allowed in RUN.
 - Protected places: `.codex/`, `AGENTS.md`, `BOOTSTRAP.codex.md` (as `.claude/`, `CLAUDE.md`, `ws/`, `.ws/`).
 - Client choice: `ws/bin/hook.sh <event> --client codex` or `CREATECODEBOX_CLIENT=codex`; the default is `claude`.
+- The next-step line (0.5.0): the `Stop` hook answers `{"decision": "block", "reason": ...}` once for each user message when the last reply has no line that starts with `▶`, the same answer as for Claude Code.
+  Codex then goes on with the reason as a new prompt, and that continued turn has `stop_hook_active`, so it is not blocked again. The engine also keeps its own "once for each user message" mark, so a host that does not send `stop_hook_active` cannot loop.
+  The same answer is given, once for each user message, when the model is about to stop while the next step is still its own work.
+  `ws.sh try` (running a page in a browser without a window) was not run in Codex: its sandbox may not let a browser start.
+  This was checked with the unit tests through the Codex adapter only (`tests/test_codex.py`), not in a real Codex run. The guide page (`projects/guide.html`), `ws.sh next`, `ws.sh where` and `ws.sh guide` do not depend on the host.
 
 ## Real runs (codex-cli 0.154.0, macOS, 2026-10-31)
 

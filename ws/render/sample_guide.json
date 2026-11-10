@@ -1,0 +1,26 @@
+{
+  "generated": "2026-11-10 14:03:22",
+  "version": "0.5.0",
+  "turn": "you",
+  "project": {
+    "slug": "01_coffee",
+    "name": "Coffee log",
+    "goal": "A page where I log each coffee I drink and see this week's total",
+    "goal_for": "self",
+    "step": 3,
+    "next": {
+      "kind": "say",
+      "text": "Look at the design in your browser. Tell Claude what to change. When it is right, type the words below.",
+      "say": "looks good"
+    },
+    "links": [
+      {"id": "prototype", "href": "01_coffee/design/ui/sketch.html"},
+      {"id": "design", "href": "01_coffee/design/ui/index.html"},
+      {"id": "schedule", "href": "schedule.html"}
+    ],
+    "build": {"done": 0, "total": 0},
+    "checks": {"you_pass": 0, "you_total": 0, "claude_pass": 0, "claude_total": 0},
+    "goal_reached": null
+  },
+  "others": []
+}

@@ -401,11 +401,11 @@ def test_st_extra():
         shot = e.p("projects", slug, "knowledge", "s.png")
         open(shot, "wb").write(b"\x89PNG\r\n" + b"0" * 400)
         e.run(["st", "mark", "T-IO-03-N1", "pass", "--by", "ai", "--evidence", "the monthly job ran and wrote a file", "--shot", shot])
-        e.prompt("4 pass")
+        e.prompt("T-IO-02-F1 passed")
         e.run(["st", "mark", "T-IO-02-F1", "pass", "--by", "user"])
         sm = json.loads(e.engine_call("print(json.dumps(engine.st_summary(root, %r)))" % slug).strip().splitlines()[-1])
-        check("st_summary: user / ai / normal の集計", sm["user_pass"] == sm["user_total"] == 4 and sm["ai_pass"] == 2 and sm["ai_total"] == 2
-              and sm["normal_pass"] == sm["normal_total"] == 3, sm)
+        check("st_summary: user / ai / normal の集計（利用者は正常系の 2 件・ai は失敗系と scheduled の 4 件）", sm["user_pass"] == sm["user_total"] == 2
+              and sm["ai_pass"] == 4 and sm["ai_total"] == 4 and sm["normal_pass"] == sm["normal_total"] == 3, sm)
     finally:
         e.close()
 
@@ -430,7 +430,8 @@ def test_done_and_append():
             e.run(["mark", sid, "done", "--evidence", "ran it and it worked fine"])
         out = e.run(["status"])[1]
         check("F3/D4: user の全ケースと正常系が合格すると DONE（ai の失敗系が未了でも第 1 版）", e.stage() == "DONE", out)
-        check("F3: DONE の文（You checked 4/4・Claude will check 1/2・Not yet checked: 1）", "First version done! You checked: 4/4. Claude will check: 1/2 (things you can't trigger by hand). Not yet checked: 1." in out, out)
+        check("F3: DONE の文（You checked 2/2・Claude will check 3/4・Not yet checked: 1）",
+              "First version done! You checked: 2/2. Claude will check: 3/4 (the empty and failure cases, and things you can't trigger by hand). Not yet checked: 1." in out, out)
         check("F3: 利用者向けの文に ai / user の語を出さない", " ai " not in out.split("DONE")[-1].lower() and "(user)" not in out)
         check("A6: DONE の文に開き方（double-click projects/…/src/index.html）", "double-click projects/%s/src/index.html" % slug in out, out)
         e.prompt("continue")
@@ -530,11 +531,12 @@ def test_hooks_g1():
         banned = ("with-secrets", "st run", "update", "harden", "intake", "repo init", "repo link", "repo adopt", "backup", "publish", "secret", "rules", "excludes", "resign")
         check("A2: permissions.allow に with-secrets・st run・update・harden などが無い", not [a for a in allow if any(("ws.sh " + b) in a for b in banned)], allow)
         check("A2: permissions.allow に素の Read が無い", not [a for a in allow if a == "Read" or a.startswith("Read(")], allow)
-        need = ["status", "list", "select", "new", "lint", "render", "open", "learn", "mark", "st list", "st mark", "st init", "schedule-init", "doctor", "version", "lang", "repo email"]
+        need = ["status", "list", "select", "new", "lint", "render", "open", "learn", "mark", "st list", "st mark", "st init", "schedule-init", "doctor", "version", "lang", "repo email",
+                "next", "where", "guide"]
         check("A2: サブコマンド単位の許可がそろう（+ Edit/Write(projects/**)）", all(("Bash(bash ws/bin/ws.sh %s:*)" % n in allow and "Bash(bash ws/bin/ws.sh %s)" % n in allow) for n in need)
               and "Edit(projects/**)" in allow and "Write(projects/**)" in allow, allow)
         check(".gitignore に .ws/ と .env 系が入っている", ".ws/" in open(os.path.join(e.root, ".gitignore")).read().split() and ".env.*" in open(os.path.join(e.root, ".gitignore")).read())
-        check("ws/VERSION は 0.4.8", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.4.8")
+        check("ws/VERSION は 0.5.0", open(os.path.join(e.root, "ws", "VERSION")).read().strip() == "0.5.0")
         check("ws.sh: python が無いと日英の案内で exit 1", subprocess.run(["/bin/sh", os.path.join(e.root, "ws", "bin", "ws.sh"), "version"], capture_output=True, env={"PATH": empty, "HOME": e.home}).returncode == 1)
     finally:
         e.close()
@@ -551,7 +553,8 @@ def test_lang():
     check("翻訳③: 置換名が全ての鍵で en と ja で一致する", all(ph(JA[k]) == ph(EN[k]) for k in EN if k in JA), [k for k in EN if k in JA and ph(JA[k]) != ph(EN[k])][:5])
     check("翻訳③: %s が残っていない（置換は名前つきの {name} だけ）", not [k for k, v in list(EN.items()) + list(JA.items()) if re.search(r"%[sd]", v)])
     check("翻訳④: en の表に他言語の文字が混ざらない", not [k for k, v in EN.items() if CJK_ALL.search(v)], [k for k, v in EN.items() if CJK_ALL.search(v)][:5])
-    check("翻訳: 文 ID の命名（rule. todo. deny. st. warn. note. select. stage. などの接頭辞）", all(re.match(r"^[a-z0-9_]+(\.[A-Za-z0-9_]+)*$", k) for k in EN))
+    check("翻訳: 文 ID の命名（rule. todo. deny. st. warn. note. select. stage. などの接頭辞）", all(re.match(r"^[a-z0-9_]+(\.[A-Za-z0-9_-]+)*$", k) for k in EN),
+          [k for k in EN if not re.match(r"^[a-z0-9_]+(\.[A-Za-z0-9_-]+)*$", k)])  # a hyphen is allowed after the first part (goal_for.public-free: the goal symbols)
     lg.use("ja")
     saved = JA.pop("note.not_recorded")
     try:
@@ -1156,7 +1159,7 @@ def test_session_resume():
         check("問題6: resume の後も src に書ける（D1: 最初のターンは読むだけ、が壊れない）", e.pre("Write", file_path=e.p("projects", slug, "src", "x.py"), content="print(1)") is None)
         e.ctx("sessionstart", {"source": "compact"})
         check("問題6: compact でもリセットしない", e.rec("session.json")["prompts"] == sess0["prompts"])
-        e.prompt("3 pass")
+        e.prompt("2 pass")
         rc, out = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
         check("問題6: resume の後も、直前の st list --numbered の番号で答えられる（C1 の印）", rc == 0, out)
         e.ctx("sessionstart", {"source": "startup"})
@@ -1905,7 +1908,7 @@ def test_tasks_triage():
         check("タスク: R1 では強制しない（triage なし・Edit は通る）・1 行の注意だけ出る",
               e.stage() == "R1" and not sorted_pending(e) and "task add" in c and "task none" not in c
               and e.pre("Edit", file_path=e.p("projects", "01_app", "PROJECT.md"), old_string="what:", new_string="what:") is None, c[-300:])
-        check("タスク: R1 の Stop は止めない", e.hook("stop", {"last_assistant_message": "ok"}) == "")
+        check("タスク: R1 の Stop は止めない（▶の行がある返事）", e.hook("stop", {"last_assistant_message": "ok\n▶ Answer the question."}) == "")
         check("タスク: 承認の前の tasks は『Before the build』の見出し", "Before the build:" in e.run(["tasks"])[1])
     finally:
         e.close()
@@ -2228,7 +2231,8 @@ def test_tasks_lang():
         c = e.pctx("CSV に書き出す機能を足してください")
         r = e.pre("Edit", file_path=e.p("projects", slug, "src", "a.py"), old_string="a", new_string="b")
         check("タスク（ja）: triage の行・deny・stop が日本語の表の文", lang_ja.MESSAGES["task.triage"] in c and r is not None and lang_ja.MESSAGES["deny.triage"] in r
-              and lang_ja.MESSAGES["stop.triage"] == json.loads(e.hook("stop", {"last_assistant_message": "x"}))["reason"], (c[-300:], r))
+              and json.loads(e.hook("stop", {"last_assistant_message": "x\n▶ 待つ"}))["reason"] == lang_ja.MESSAGES["stop.triage"] + "\n"
+              + lang_ja.MESSAGES["stop.wait"].replace("{next}", lang_ja.MESSAGES["next.run.build"]).replace("{after}", lang_ja.MESSAGES["next.paused"] + "そのまま打つ言葉: 続けて"), (c[-300:], r))
         rc, out = e.run(["task", "add", "CSV 出力", "--due", "2026-11-05"])
         check("タスク（ja）: RUN の tasks の見出しは日本語（第 1 版を作り終えるために）・triage の行に単独実行の規則", "第 1 版を作り終えるためにやること:" in e.run(["tasks"])[1] and "`&&`" in lang_ja.MESSAGES["task.triage"])
         check("タスク（ja）: task add の出力は日本語（予定を更新しました）", rc == 0 and "足しました" in out and "予定を更新しました" in out, out)
@@ -2428,6 +2432,1314 @@ def test_commit_email_privacy():
         e.close()
 
 
+# ---------- 0.5.0: the next step, the guide page, the lost words, the goal question ----------
+GUIDE_TEMPLATE = os.path.join(TEMPLATE, "ws", "render", "guide.template.html")
+MINI_GUIDE = ('<!doctype html>\n<html lang="en">\n<head><meta charset="utf-8"><title>guide</title>'
+              '<style>body{font:16px/1.6 /*__WS_FONT__*/system-ui,sans-serif}</style></head>\n<body>'
+              '<noscript><p><!--ws-noscript-->Turn on JavaScript to see this page.</p></noscript>\n'
+              '<script type="application/json" id="ws-data">/*__WS_DATA__*/null</script>\n'
+              '<script type="application/json" id="ws-labels">/*__WS_LABELS__*/null</script>\n</body>\n</html>\n')
+
+
+def guide_fixture(e):
+    """The guide page needs its template. When the real one is not in the repository yet, a minimal one stands in (same marks)."""
+    path = e.p("ws", "render", "guide.template.html")
+    if not os.path.isfile(path):
+        e.write("ws/render/guide.template.html", MINI_GUIDE)
+
+
+def ns_of(e):
+    """next_step() of the workspace as it is now, in the language of the environment."""
+    out = e.engine_call("engine.lang.use(engine.get_lang(root)); print(json.dumps(engine.next_step(root, engine.compute(root))))")
+    try:
+        return json.loads(out.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return {"kind": "?", "text": out, "say": ""}
+
+
+def ns_you(e):
+    """next_step() as the user sees it when no reply is running (turn: you)."""
+    out = e.engine_call("engine.lang.use(engine.get_lang(root)); print(json.dumps(engine.next_step(root, engine.compute(root), dict(engine.get_session(root), turn='you'))))")
+    try:
+        return json.loads(out.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return {"kind": "?", "text": out, "say": ""}
+
+
+GOAL_Q_STOP = {"last_assistant_message": "First version done!\nYou wanted: a small tool. Open the app and try it. Does it do that? Reply yes or not yet.\n\u25b6 Answer yes or not yet."}
+
+
+def gd_of(e):
+    """guide_data() of the workspace as it is now."""
+    out = e.engine_call("engine.lang.use(engine.get_lang(root)); print(json.dumps(engine.guide_data(root)))")
+    try:
+        return json.loads(out.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return {"error": out}
+
+
+def to_done(e, io=None):
+    """A project at DONE, made the way a user would: build rows marked with a result, the user's cases passed by the user's words."""
+    slug = build_to_run(e, io=io)
+    e.prompt("continue")
+    rows = e.rec("schedule_%s.json" % slug)["rows"]
+    for r in rows[:-1]:
+        e.run(["mark", r["id"], "done", "--evidence", "ran it and it worked fine"])
+    e.run(["st", "list", "--numbered"])
+    e.prompt("all pass")
+    for cid in [r["id"] for r in e.rec("st_%s.json" % slug)["rows"] if r.get("who", "user") != "ai"]:
+        e.run(["st", "mark", cid, "pass", "--by", "user"])
+    e.run(["mark", rows[-1]["id"], "done", "--evidence", "every case on the list really came out"])
+    return slug
+
+
+def walk_next(code):
+    """Every row of the next-step table, in one language. Returns [(row, next_step, guide step)]."""
+    out = []
+    e = Env()
+    try:
+        e.env["CREATECODEBOX_LANG"] = code
+        guide_fixture(e)
+        add = lambda row: out.append((row, ns_of(e), (gd_of(e).get("project") or {}).get("step"), ns_you(e)))
+        e.hook("sessionstart", {"source": "startup"})
+        add("none")
+        e.prompt("make a booking page")
+        e.run(["new", "book", "--name", "Book", "--quote", "make a booking page"])
+        slug = "01_book"
+        add("r1.what")
+        e.set_fields(slug, what="booking page")
+        add("r1.goal")
+        e.set_fields(slug, goal_type="share")
+        add("r2.ref")
+        e.set_fields(slug, references="none")
+        add("r2.sketch")
+        e.write("projects/%s/design/ui/sketch.html" % slug, SKETCH)
+        add("r2.look")
+        e.set_fields(slug, who="clients", today="phone", done_when="clients can book", not_doing="payments", has_ui="yes", viz="local")
+        e.write("projects/%s/design/ui/brief.md" % slug, "## Purpose\nBook\n## Layout\nTop date\n## Colors\nblue\n## Text\nlarge\n## States\nempty hint\n")
+        e.write("projects/%s/design/ui/index.html" % slug, "<html><body>x</body></html>")
+        add("r3")
+        e.pctx("Looks great, go ahead")
+        add("confirm")
+        e.pctx("hmm")
+        add("r3 again")
+        e.pctx("looks good")
+        add("r4")
+        e.write("projects/%s/design/io.json" % slug, json.dumps({"rows": [dict(IO_EN["rows"][0], kind="screen", screen="SC-1"), IO_EN["rows"][1], IO_SCHED]}))
+        add("r4a")
+        e.pctx("approve")
+        add("rs")
+        e.run(["schedule-init"])
+        add("run.build")
+        rows = e.rec("schedule_%s.json" % slug)["rows"]
+        for r in rows[:-1]:
+            e.run(["mark", r["id"], "done", "--evidence", "ran it and it worked fine"])
+        add("run.check")
+        e.run(["st", "list", "--numbered"])
+        e.pctx("all pass")
+        for cid in [r["id"] for r in e.rec("st_%s.json" % slug)["rows"] if r.get("who", "user") != "ai"]:
+            e.run(["st", "mark", cid, "pass", "--by", "user"])
+        add("run.claude")
+        shot = e.p("projects", slug, "knowledge", "s.png")
+        open(shot, "wb").write(b"\x89PNG\r\n" + b"0" * 400)
+        e.run(["st", "mark", "T-IO-03-N1", "pass", "--by", "ai", "--evidence", "the monthly job ran and wrote a file", "--shot", shot])
+        add("run.close")
+        e.run(["mark", rows[-1]["id"], "done", "--evidence", "every case on the list really came out"])
+        add("done.idle")
+        e.pctx("ok")
+        e.hook("stop", GOAL_Q_STOP)
+        add("done.ask")
+        e.pctx("not yet")
+        add("done.no")
+        out.append(("(stage at the end)", e.stage(), None, None))
+    finally:
+        e.close()
+    e = Env()
+    try:
+        e.env["CREATECODEBOX_LANG"] = code
+        guide_fixture(e)
+        to_done(e)
+        e.pctx("ok")
+        e.hook("stop", GOAL_Q_STOP)
+        e.pctx("yes")
+        out.append(("done.yes", ns_of(e), (gd_of(e).get("project") or {}).get("step"), ns_you(e)))
+        e.write("projects/02_shop/PROJECT.md", "# Name: Shop\n")
+        e.hook("sessionstart", {"source": "startup"})
+        out.append(("r0", ns_of(e), None, ns_you(e)))
+    finally:
+        e.close()
+    return out
+
+
+def test_next_step():
+    from lang import en as lang_en, ja as lang_ja
+    # row -> (kind, message key, the key of the exact word, the step of the six)
+    want = {"none": ("answer", "next.none", "", None), "r0": ("answer", "next.r0", "", None),
+            "r1.what": ("answer", "next.r1.what", "", 1), "r1.goal": ("answer", "next.r1.goal", "", 1),
+            "r2.ref": ("answer", "next.r2.ref", "", 2), "r2.sketch": ("wait", "next.r2.sketch", "", 3), "r2.look": ("look", "next.r2.look", "", 3),
+            "r3": ("say", "next.r3", "word.r3", 3), "confirm": ("answer", "next.confirm", "", 3), "r3 again": ("say", "next.r3", "word.r3", 3),
+            "r4": ("wait", "next.r4", "", 4), "r4a": ("say", "next.r4a", "word.r4a", 4), "rs": ("wait", "next.rs", "", 5),
+            "run.build": ("wait", "next.run.build", "", 5), "run.check": ("check", "next.run.check", "", 6, 2),
+            "run.claude": ("wait", "next.run.claude", "", 6, 1), "run.close": ("wait", "next.run.close", "", 6), "done.idle": ("answer", "next.done.idle", "", 6),
+            "done.ask": ("answer", "next.done.ask", "", 6),
+            "done.no": ("answer", "next.done.no", "", 6), "done.yes": ("done", "next.done.yes", "", 6)}
+    for code, tbl in (("en", lang_en.MESSAGES), ("ja", lang_ja.MESSAGES)):
+        got = walk_next(code)
+        seen = {row: (ns, step) for row, ns, step, _ in got if row != "(stage at the end)"}
+        check("次の一手（%s）: 表の全ての行を通せた（%d行・最後はDONE）" % (code, len(want)), set(seen) == set(want) and dict((r, n) for r, n, _, _ in got).get("(stage at the end)") == "DONE",
+              (sorted(set(want) - set(seen)), [x for x in got if x[0] == "(stage at the end)"]))
+        you = {row: y for row, _, _, y in got if row != "(stage at the end)"}
+        lie = [(row, y) for row, y in you.items() if y.get("kind") == "wait"]
+        check("次の一手（%s）: 利用者の番（turn: you）のときは、どの段でも「待つ」にならない（Claude が止まっていたら、続けさせる言葉を出す）" % code, not lie and len(you) == len(want), lie)
+        waits = [row for row, (ns, _) in seen.items() if ns.get("kind") == "wait"]
+        bad = [(row, you[row]) for row in waits if you[row] != {"kind": "say", "text": tbl["next.paused"], "say": tbl["word.continue"]}]
+        check("次の一手（%s）: Claude の仕事が残ったまま止まったとき（%d行）は「止まりました。続けさせるには下の言葉」と continue の言葉" % (code, len(waits)), len(waits) >= 6 and not bad, bad)
+        same = [row for row, (ns, _) in seen.items() if ns.get("kind") != "wait" and you[row] != ns]
+        check("次の一手（%s）: 利用者の仕事が残っている行は、turn が変わっても同じ" % code, not same, same)
+        for row, spec in want.items():
+            kind, key, say, step = spec[:4]
+            ns, st = seen.get(row, ({}, None))
+            text = tbl[key].replace("{path}", "projects/01_app/src/index.html").replace("{n}", str(spec[4]) if len(spec) > 4 else "{n}")
+            check("次の一手（%s）: %s は kind=%s・表の文・合言葉・%s段目" % (code, row, kind, step),
+                  ns.get("kind") == kind and ns.get("text") == text and ns.get("say") == (tbl[say] if say else "") and st == step and set(ns) == {"kind", "text", "say"},
+                  (ns, st))
+    bad = [k for k, v in lang_en.MESSAGES.items() if k.startswith("next.") and k not in ("next.line", "next.say")
+           and re.search(r"\bR\d|RUN|DONE|\bpm\b|designer|builder|reviewer|\.json|\.md\b", v)]
+    check("次の一手: 利用者向けの文に段の記号・エージェント名・ファイル名が無い（アプリのindex.htmlの場所だけ）", not bad, bad)
+
+
+def test_next_context_and_stop():
+    from lang import en as lang_en, ja as lang_ja
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    e = Env()
+    try:
+        guide_fixture(e)
+        s = e.ctx("sessionstart", {"source": "startup"})
+        check("文脈: 起動時に Next for the user と▶の規則が入る（プロジェクトなし）", "Next for the user: " + EN["next.none"] in s and EN["rule.next"] in s, s[:400])
+        check("文脈: プロジェクトが無い間はガイドのページを書かない・開く指示も出さない", not os.path.exists(e.p("projects", "guide.html")) and "ws.sh guide`" not in s.replace(EN["rule.R0.empty"], ""))
+        out = e.hook("stop", {"last_assistant_message": "Hello"})
+        check("Stop: 利用者の入力がまだ無い間は▶を求めない", out == "", out)
+        slug = to_r3(e, "en")
+        c = e.pctx("show me")
+        check("文脈: 入力ごとに Next for the user と Exact words（R3は looks good）と▶の規則が入る",
+              "Next for the user: " + EN["next.r3"] in c and "\nExact words: looks good\n" in c and EN["rule.next"] in c, c[:600])
+        check("文脈: ガイドをまだ開いていない間は、開く指示が1行入る", EN["note.guide_open"] in c)
+        check("ガイド: 入力のあとは turn が claude", e.rec("session.json").get("turn") == "claude" and gd_of(e)["turn"] == "claude")
+        out = e.hook("stop", {"last_assistant_message": "Here is the design. What should change?"})
+        o = json.loads(out) if out else {}
+        want = EN["stop.next"].replace("{next}", EN["next.r3"] + " Exact words: looks good")
+        check("Stop: ▶の行が無い返事は止める（理由は stop.next・今の次の一手と合言葉つき）", o.get("decision") == "block" and o.get("reason") == want, out)
+        check("Stop: 止めた間は turn が claude のまま", e.rec("session.json").get("turn") == "claude")
+        out = e.hook("stop", {"last_assistant_message": "Here is the design. What should change?"})
+        check("Stop: 同じ入力の2回目は通す（1入力につき1回だけ）・turn は you になる", out == "" and e.rec("session.json").get("turn") == "you" and gd_of(e)["turn"] == "you", out)
+        for msg in ("Done.\n▶ Type looks good when it is right.", "Done.\n  ▶ next", "Done.\n**▶ Type looks good**", "Done.\n> ▶ next", "Done.\n- ▶ next", "▶ only",
+                    "Done.\n*▶ next*", "Done.\n_▶ next_", "Done.\n`▶ next`", "Done.\n### ▶ next", "Done.\n1. ▶ next", "Done.\n▶️ next", "Done.\n ► next"):
+            e.pctx("show me")
+            out = e.hook("stop", {"last_assistant_message": msg})
+            check("Stop: ▶で始まる行があれば通す（%r）" % msg.splitlines()[-1], out == "", out)
+        e.pctx("show me")
+        out = e.hook("stop", {"last_assistant_message": "Press the ▶ button in the page, then tell me."})
+        check("Stop: 行の途中の▶は▶の行ではない（止める）", '"block"' in out, out)
+        e.pctx("show me")
+        out = e.hook("stop", {})
+        check("Stop: 返事が読めないときは止めない", out == "", out)
+        e.pctx("show me")
+        out = e.hook("stop", {"transcript_path": os.path.join(e.tmp, "none.jsonl")})
+        check("Stop: transcript が読めないときも止めない", out == "", out)
+        tp = os.path.join(e.tmp, "t.jsonl")
+        open(tp, "w").write(json.dumps({"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "No mark here."}]}}) + "\n")
+        out = e.hook("stop", {"transcript_path": tp})
+        check("Stop: last_assistant_message が無ければ transcript の最後の返事を見る", '"block"' in out and "▶" in out, out)
+        e.pctx("show me")
+        out = e.hook("stop", {"last_assistant_message": "No mark.", "stop_hook_active": True})
+        check("Stop: stop_hook_active のときは止めない", out == "", out)
+        e.env["CREATECODEBOX_LANG"] = "ja"
+        c = e.pctx("見せて")
+        check("文脈（ja）: 次の一手・合言葉・▶の規則が日本語の表の文", "利用者が次にすること: " + JA["next.r3"] in c and "\nそのまま打つ言葉: この形で\n" in c and JA["rule.next"] in c, c[:500])
+        out = e.hook("stop", {"last_assistant_message": "設計です。"})
+        check("Stop（ja）: 理由が日本語の表の文", json.loads(out)["reason"] == JA["stop.next"].replace("{next}", JA["next.r3"] + "そのまま打つ言葉: この形で"), out)
+        rc, out = e.run(["next"])
+        check("ws.sh next（ja）: 次の一手と合言葉の2行", rc == 0 and out.strip() == "利用者が次にすること: " + JA["next.r3"] + "\nそのまま打つ言葉: この形で", out)
+        e.env.pop("CREATECODEBOX_LANG")
+        rc, out = e.run(["next"])
+        check("ws.sh next: Next for the user と Exact words の2行", rc == 0 and out.strip() == "Next for the user: " + EN["next.r3"] + "\nExact words: looks good", out)
+    finally:
+        e.close()
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = build_to_run(e)
+        e.prompt("continue")
+        e.prompt("ok")
+        e.pctx("Please add an export to CSV by 2026-11-05")
+        check("triage中でも ws.sh next / where / guide は通る", e.pre("Bash", command="bash ws/bin/ws.sh next") is None and e.pre("Bash", command="bash ws/bin/ws.sh where") is None
+              and e.pre("Bash", command="bash ws/bin/ws.sh guide") is None)
+        wait_text = EN["stop.wait"].replace("{next}", EN["next.run.build"]).replace("{after}", EN["next.paused"] + " Exact words: continue")
+        out = e.hook("stop", {"last_assistant_message": "done"})
+        r = json.loads(out)["reason"] if out else ""
+        check("Stop: triage と「作業が済んでいない」の両方に当たるときは、1つのblockに両方の文（triage が先・▶の文は重ねない）",
+              r == EN["stop.triage"] + "\n" + wait_text, out)
+        out = e.hook("stop", {"last_assistant_message": "done"})
+        check("Stop: 両方に当たったあとの2回目は通す", out == "", out)
+        check("Stop: 通ったあと、Claude の仕事が残っていれば、ガイドの次の一手は continue の言葉（待つ、にはならない）",
+              gd_of(e)["turn"] == "you" and gd_of(e)["project"]["next"] == {"kind": "say", "text": EN["next.paused"], "say": "continue"}, gd_of(e)["project"]["next"])
+        rc, o = e.run(["next"])
+        rc2, w = e.run(["where"])
+        check("ws.sh next / where も同じ（止まりました・continue）", "Next for the user: " + EN["next.paused"] + "\nExact words: continue" in o and "Next: " + EN["next.paused"] + " Exact words: continue" in w, (o, w))
+        c = e.pctx("continue")
+        check("continue と打つと、文脈に「済んでいない手順はあなたの仕事」の1行が入り、次の一手は待つに戻る（triage は立てない）",
+              EN["note.go_on"].replace("{next}", EN["next.run.build"]) in c and "Next for the user: " + EN["next.run.build"] in c and not sorted_pending(e), c[-500:])
+        out = e.hook("stop", {"last_assistant_message": "I built one more step.\n▶ Wait: I am building."})
+        check("Stop: ▶があっても、Claude の仕事が残っていれば1回止める（stop.wait だけ）", out and json.loads(out)["reason"] == wait_text, out)
+        out = e.hook("stop", {"last_assistant_message": "I cannot go on: I need the logo file.\n▶ Type continue."})
+        check("Stop: 同じ入力の2回目は通す（Claude が本当に進めないときのため）", out == "", out)
+        e.pctx("Please also add a dark mode")
+        out = e.hook("stop", {"last_assistant_message": "I added it to the list.\n▶ Wait: I am building."})
+        check("Stop: ▶があっても triage と作業の残りで止める", out and json.loads(out)["reason"] == EN["stop.triage"] + "\n" + wait_text, out)
+        e.hook("sessionstart", {"source": "startup"})
+        c = e.ctx("sessionstart", {"source": "startup"})
+        check("起動時: Claude の仕事が残っている段でも、次の一手は continue の言葉（turn は you）", "Next for the user: " + EN["next.paused"] + "\nExact words: continue" in c, c[:500])
+        e.pctx("continue")
+        out = e.hook("stop", {"last_assistant_message": "Continuing App. I start writing from your next message."})
+        check("Stop: 会話の最初のターン（作る段は読むだけ）では「作業を続けて」で止めない（▶の行だけを求める）",
+              out and json.loads(out)["reason"] == EN["stop.next"].replace("{next}", EN["next.paused"] + " Exact words: continue"), out)
+        e.pctx("continue")
+        check("(前提) 2つ目の入力のあとは turn が claude", e.rec("session.json").get("turn") == "claude")
+        for src in ("resume", "compact", "clear", "startup"):
+            e.engine_call("engine.set_session(root, turn='claude')")
+            e.hook("sessionstart", {"source": src})
+            check("SessionStart（%s）: turn を you に戻す（割り込みで Stop が来なかったあとも、ページは「作業中」のままにならない）" % src,
+                  e.rec("session.json").get("turn") == "you" and gd_of(e)["turn"] == "you")
+        e.pctx("continue")
+        e.run(["status"])
+        e.run(["next"])
+        e.run(["tasks"])
+        check("ws.sh のコマンドは turn を変えない", e.rec("session.json").get("turn") == "claude" and gd_of(e)["turn"] == "claude")
+    finally:
+        e.close()
+
+
+def test_lost():
+    from lang import en as lang_en, ja as lang_ja
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    en = _engine_template
+    yes = ["help", "Help!", "HELP", "I'm lost", "I’m lost.", "i am lost", "lost", "stuck", "I'm stuck", "what now?", "What next?", "what do I do?",
+           "What should I do?", "what do i do now", "where am i?", "I don't know what to do", "confused", "ok, help", "help please", "ｈｅｌｐ",
+           "迷った", "迷いました。", "迷子", "ヘルプ", "助けて", "どうすれば？", "どうすればいい", "どうすればいいですか", "どうしたらいい？", "次は", "次は何", "次は何ですか",
+           "次は何をすれば", "何をすれば", "何をすればいい？", "今どこ", "いまどこ？", "今どこですか", "わからなくなった", "分からなくなった", "困った"]
+    no = ["", "help me add a button to the top of the page", "I need help with the color of the header and the title", "add a help page", "helpful",
+          "what is next on the list of things to build today", "yes", "ok", "looks good", "approve", "continue", "new", "1, 2 pass",
+          "ヘルプのページを足してください", "次は色を変えてください", "困ったときの連絡先を載せたい", "迷路のゲームを作りたい", "はい", "続き"]
+    check("迷った: 表の言葉は全て当たる（句読点・全角・前後の ok や please は無視）", all(en.is_lost(x) for x in yes), [x for x in yes if not en.is_lost(x)])
+    check("迷った: 長い文に help が入っているだけ・承認や続きの言葉は当たらない", not any(en.is_lost(x) for x in no), [x for x in no if en.is_lost(x)])
+    check("迷った: 迷ったの言葉は承認の言葉ではなく、triage にも回らない",
+          all(not en.is_confirm(x) and not en.is_approve(x) and not en.is_publish(x) and not en.is_confirm_yes(x) and en.trivial_prompt(x) for x in yes if x.strip()))
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = to_r3(e, "en")
+        c = e.pctx("help")
+        rc, where = e.run(["where"])
+        check("迷った: 文脈に note.lost と、今どこ・次の一手のまとめが入る", EN["note.lost"] + "\n" + where.strip() in c, (c[-700:], where))
+        lines = where.strip().splitlines()
+        check("where: 5行（目的・段・済んだこと・次・いつでも言える言葉）",
+              rc == 0 and len(lines) == 5 and lines[0] == "Your goal: booking page" and lines[1] == "You are at step 3 of 6: Prototype — You look, and say what is different"
+              and lines[2] == "Done so far: project started, first picture made"
+              and lines[3] == "Next: " + EN["next.r3"] + " Exact words: looks good" and lines[4] == EN["where.always"], where)
+        check("迷った: 回数をセッションに数える", e.rec("session.json").get("lost") == 1)
+        e.env["CREATECODEBOX_LANG"] = "ja"
+        c = e.pctx("どうすればいい？")
+        check("迷った（ja）: 「いい」を含んでも承認の質問にならない（保留を立てない・記録しない）",
+              JA["note.lost"] in c and "この形で」として記録しますか" not in c and e.rec("session.json").get("pending_confirm") is None and e.stage() == "R3"
+              and e.rec("session.json").get("lost") == 2, c[-500:])
+        check("where（ja）: 日本語の表の文（6段のうち3段目・プロトタイプ）・句点のあとに半角の空白を入れない", "今は、6段のうち3段目です: プロトタイプ — 見て、違う所を伝えます" in c
+              and JA["where.always"] in c and "次にすること: " + JA["next.r3"] + "そのまま打つ言葉: この形で" in c, c[-500:])
+        e.env.pop("CREATECODEBOX_LANG")
+        e.pctx("Looks great, go ahead")
+        c = e.pctx("what now?")
+        check("迷った: 承認の質問の直後に来ても記録しない（質問は取り下げ）", e.stage() == "R3" and EN["note.confirm_cleared"] in c and EN["note.lost"] in c, c[-400:])
+    finally:
+        e.close()
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = build_to_run(e)
+        e.prompt("continue")
+        e.prompt("ok")
+        c = e.pctx("I'm lost")
+        check("迷った: 作る段でも triage を立てない（Edit は止まらない）・まとめに作った数が入る", not sorted_pending(e) and "task none" not in c
+              and "plan approved, 0 of 3 steps built, you checked 0 of 2" in c and "You are at step 5 of 6: Build" in c, c[-600:])
+    finally:
+        e.close()
+    e = Env()
+    try:
+        rc, out = e.run(["where"])
+        check("where: プロジェクトが無いとき（目的はまだ・1段目・次は作りたい物を伝える）", rc == 0 and "Your goal: not said yet" in out and "step 1 of 6: Ask" in out
+              and "Done so far: nothing yet" in out and "Next: " + EN["next.none"] in out, out)
+    finally:
+        e.close()
+
+
+def test_guide_page():
+    from lang import en as lang_en, ja as lang_ja
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    sample = json.load(open(os.path.join(TEMPLATE, "ws", "render", "sample_guide.json"), encoding="utf-8"))
+    keys = lambda d: sorted(d) if isinstance(d, dict) else None
+
+    def shape_ok(d):
+        p = d.get("project")
+        top = keys(sample) if p is not None else sorted(keys(sample) + ["next"])  # no project chosen: the one next step is at the top
+        return (keys(d) == top and (p is not None or keys(d["next"]) == ["kind", "say", "text"]) and d["turn"] in ("you", "claude") and isinstance(d["others"], list)
+                and re.match(r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$", d["generated"]) is not None
+                and (p is None or (keys(p) == keys(sample["project"]) and keys(p["next"]) == keys(sample["project"]["next"])
+                                   and keys(p["build"]) == keys(sample["project"]["build"]) and keys(p["checks"]) == keys(sample["project"]["checks"])
+                                   and all(keys(l) == ["href", "id"] for l in p["links"]) and p["goal_reached"] in (None, True, False)
+                                   and p["goal_for"] in ("", "self", "share", "public-free", "public-paid", "unknown") and p["step"] in range(1, 7))))
+    check("ガイド: sample_guide.json 自体が契約の形（英語・step 3・looks good）", shape_ok(sample) and sample["project"]["next"]["say"] == "looks good"
+          and sample["project"]["next"]["text"] == EN["next.r3"] and not CJK_ALL.search(json.dumps(sample, ensure_ascii=False)))
+    e = Env()
+    try:
+        guide_fixture(e)
+        d = gd_of(e)
+        check("ガイドのデータ: プロジェクトなし（project は null・others は空・版は ws/VERSION・次の一手は一番上の next）", shape_ok(d) and d["project"] is None and d["others"] == []
+              and d["version"] == open(os.path.join(TEMPLATE, "ws", "VERSION")).read().strip() and d["next"] == {"kind": "answer", "text": EN["next.none"], "say": ""}, d)
+        e.hook("sessionstart", {"source": "startup"})
+        e.prompt("make a booking page")
+        e.run(["new", "book", "--name", "Book", "--quote", "make a booking page"])
+        slug = "01_book"
+        page, js = e.p("projects", "guide.html"), e.p("projects", "guide.data.js")
+        check("ガイド: ws.sh new のあとで projects/guide.html と guide.data.js が書かれる", os.path.isfile(page) and os.path.isfile(js))
+        d = gd_of(e)
+        check("ガイドのデータ: R1（1段目・目的はまだ・リンクは予定だけ・数は0）", shape_ok(d) and d["project"]["step"] == 1 and d["project"]["goal"] == "" and d["project"]["goal_for"] == ""
+              and d["project"]["name"] == "Book" and d["project"]["slug"] == slug and [l["id"] for l in d["project"]["links"]] in ([], ["schedule"])
+              and d["project"]["build"] == {"done": 0, "total": 0} and d["project"]["checks"] == {"you_pass": 0, "you_total": 0, "claude_pass": 0, "claude_total": 0}
+              and d["project"]["goal_reached"] is None, d)
+        e.set_fields(slug, goal_type="share", what="booking page", who="clients", today="phone", done_when="clients can book", not_doing="payments", has_ui="yes", viz="local")
+        e.write("projects/%s/design/ui/sketch.html" % slug, SKETCH)
+        e.write("projects/%s/design/ui/brief.md" % slug, "## Purpose\nBook\n## Layout\nTop date\n## Colors\nblue\n## Text\nlarge\n## States\nempty hint\n")
+        e.write("projects/%s/design/ui/index.html" % slug, "<html><body>x</body></html>")
+        c = e.pctx("show me")
+        d = gd_of(e)
+        check("ガイドのデータ: R3（3段目・目的と誰のため・prototype と design と schedule のリンクがこの順）",
+              shape_ok(d) and d["project"]["step"] == 3 and d["project"]["goal"] == "booking page" and d["project"]["goal_for"] == "share"
+              and d["project"]["links"] == [{"id": "prototype", "href": slug + "/design/ui/sketch.html"}, {"id": "design", "href": slug + "/design/ui/index.html"},
+                                            {"id": "schedule", "href": "schedule.html"}]
+              and d["project"]["next"] == {"kind": "say", "text": EN["next.r3"], "say": "looks good"}, d)
+        txt = open(js, encoding="utf-8").read()
+        m = re.match(r'^window\.__CCB_GUIDE__ && window\.__CCB_GUIDE__\("([0-9a-f]{16,64})", (.*)\);\n?$', txt, re.S)
+        body = json.loads(m.group(2)) if m else None
+        same = lambda x: dict(x, generated="") if isinstance(x, dict) else x
+        check("ガイド: guide.data.js は window.__CCB_GUIDE__ && window.__CCB_GUIDE__(<合言葉>, <JSON>); の1文で、中身は今のデータ（turn は claude）",
+              m is not None and same(body) == same(d) and body["turn"] == "claude", txt[:200])
+        html = open(page, encoding="utf-8").read()
+        tok = m.group(1) if m else ""
+        want = e.engine_call("import hmac, hashlib, os\nk = engine.ws_key(create=False)\nprint(hmac.new(k, ('guide:' + os.path.realpath(root)).encode('utf-8'), hashlib.sha256).hexdigest()[:16])").strip().splitlines()[-1]
+        e.run(["next"])
+        again = re.match(r'^window\.__CCB_GUIDE__ && window\.__CCB_GUIDE__\("([0-9a-f]+)"', open(js, encoding="utf-8").read())
+        check("ガイド: 合言葉は、ワークスペースの外にある署名の鍵（~/.createcodebox）とワークスペースの場所から作る（16桁・guide.html と guide.data.js で同じ・描き直しても同じ）",
+              len(tok) == 16 and tok == want and (os.path.isfile(GUIDE_TEMPLATE) is False or 'var TOKEN = "%s";' % tok in html) and again is not None and again.group(1) == tok, (tok, want))
+        wsdir = e.p(".ws")
+        found = [n for n in os.listdir(wsdir) if os.path.isfile(os.path.join(wsdir, n)) and tok in open(os.path.join(wsdir, n), encoding="utf-8", errors="replace").read()]
+        check("ガイド: 合言葉はどこにも保存しない（.ws/ のどのファイルにも無い・state.json に guide_token の鍵が無い）", tok and not found and "guide_token" not in e.rec("state.json"), found)
+        stale = "0123456789" + "abcdef" + "01234567"  # a made-up old value, built from parts (it is not a key)
+        e.engine_call("engine.set_state(root, **{'guide_' + 'token': %r})" % stale)
+        e.run(["next"])
+        check("ガイド: 前の版が state.json に置いた合言葉の写しは、次に描くときに消す", "guide_token" not in e.rec("state.json") and e.rec("state.json").get("schema") == 3
+              and stale not in open(js, encoding="utf-8").read())
+        check("ガイド: guide.html にデータと言葉が埋まり、置換の目印が残らない・署名を出さない",
+              "/*__WS_" not in html and '"goal": "booking page"' in html and '"lost_say": "help"' in html and "_sig" not in html and '<html lang="en">' in html, html[:200])
+        m1, m2 = os.stat(page).st_mtime_ns, os.stat(js).st_mtime_ns
+        time.sleep(1.1)
+        e.pctx("show me again")
+        rc, out = e.run(["next"])
+        check("ガイド: 中身が同じなら書き直さない（時刻だけの違いは変更に数えない）", (os.stat(page).st_mtime_ns, os.stat(js).st_mtime_ns) == (m1, m2))
+        e.hook("stop", {"last_assistant_message": "Here.\n▶ Type looks good."})
+        check("ガイド: Stop が通ると turn が you に変わり、2つのファイルが書き直される", '"turn": "you"' in open(js, encoding="utf-8").read()
+              and '"turn": "you"' in open(page, encoding="utf-8").read() and os.stat(js).st_mtime_ns != m2)
+        check("ガイド: まだ開いていない間、文脈に開く指示がある", EN["note.guide_open"] in c)
+        rc, out = e.run(["guide"])
+        check("ws.sh guide（dry run）: 開く予定とページの場所を出し、state.json に guide_opened を記録する",
+              rc == 0 and "Would open: projects/guide.html" in out and os.path.realpath(page) in out and e.rec("state.json").get("guide_opened") is True, out)
+        c = e.pctx("show me")
+        s = e.ctx("sessionstart", {"source": "resume"})
+        check("ガイド: 開いたあとは、開く指示を出さない（入力・起動とも）", EN["note.guide_open"] not in c and EN["note.guide_open"] not in s)
+        check("ガイド: 新しい会話でも guide_opened は残る", e.hook("sessionstart", {"source": "startup"}) and e.rec("state.json").get("guide_opened") is True)
+        rc, out = e.run(["open", "projects/guide.html"])
+        check("ガイド: ws.sh open でこのページを開ける", rc == 0 and "guide.html" in out, out)
+        w = e.pre("Write", file_path=page, content="x")
+        check("ガイド: AIは直接書けない（guide.html・guide.data.js とも・理由は ws.sh だけが書く・大文字の名前でも同じ）", w is not None and "only by ws.sh" in w
+              and e.pre("Write", file_path=js, content="x") is not None and e.pre("Edit", file_path=js, old_string="a", new_string="b") is not None
+              and "only by ws.sh" in (e.pre("Write", file_path=e.p("projects", "GUIDE.DATA.JS"), content="x") or ""), w)
+        check("ガイド: AIは Read でも読めない（合言葉が入っているため）・ws.sh guide と open は通る",
+              EN["deny.guide_file"] in (e.pre("Read", file_path=page) or "") and e.pre("Read", file_path=js) is not None
+              and e.pre("Bash", command="bash ws/bin/ws.sh guide") is None and e.pre("Bash", command="bash ws/bin/ws.sh open projects/guide.html") is None)
+        for cmd in ("cat projects/guide.html", "cp a.js projects/guide.data.js", "cd projects && cp 01_book/design/a.js guide.data.js", "cp a.js projects/GUIDE.DATA.JS",
+                    "cd projects && cp a.html Guide.html", "cat projects/gui'de'.html", "ls projects/guide.data.j[s]",
+                    "cat projects/schedule.html", "cd projects && cp 01_book/design/a.html schedule.html", "cp a.html projects/SCHEDULE.HTML"):
+            check("ガイド: 承認の前の段でも、Bash がワークスペースの書くページの名前（guide.html・guide.data.js・schedule.html）を出すと止まる（%s）" % cmd,
+                  EN["deny.guide_file"] in (e.pre("Bash", command=cmd) or ""), e.pre("Bash", command=cmd))
+        check("予定のページ: ws.sh open と tasks gantt は通る・Read は通る（合言葉が無いため）", e.pre("Bash", command="bash ws/bin/ws.sh open projects/schedule.html") is None
+              and e.pre("Bash", command="bash ws/bin/ws.sh tasks gantt --text") is None and e.pre("Read", file_path=e.p("projects", "schedule.html")) is None)
+        e.env["CREATECODEBOX_LANG"] = "ja"
+        e.run(["guide"])
+        html = open(page, encoding="utf-8").read()
+        check("ガイド（ja）: lang 属性・日本語の言葉・CJK のフォント", '<html lang="ja">' in html and '"lost_say": "迷った"' in html and "Hiragino" in html
+              and '"text": "%s"' % JA["next.r3"] in html, html[:200])
+        e.env.pop("CREATECODEBOX_LANG")
+        # two projects: the other one is listed, and with none chosen the page has no project
+        e.write("projects/02_shop/PROJECT.md", "# Name: Shop\ngoal_type: self\nwhat: a shop list\n")
+        d = gd_of(e)
+        check("ガイドのデータ: ほかのプロジェクトは others に（slug・name・step）", shape_ok(d) and d["others"] == [{"slug": "02_shop", "name": "Shop", "step": 2}], d["others"])
+        e.hook("sessionstart", {"source": "startup"})
+        d = gd_of(e)
+        check("ガイドのデータ: どれも選んでいない間は project が null で、全部が others に、次の一手（続きか新規か）が一番上の next に",
+              shape_ok(d) and d["project"] is None and [o["slug"] for o in d["others"]] == [slug, "02_shop"]
+              and d["next"] == {"kind": "answer", "text": EN["next.r0"], "say": ""} and '"text": "%s"' % EN["next.r0"] in open(js, encoding="utf-8").read(), d)
+        # a render that fails never breaks a hook or a command
+        tpl = e.p("ws", "render", "guide.template.html")
+        os.rename(tpl, tpl + ".off")
+        e.engine_call("engine.set_state(root, guide_opened=False)")
+        out = e.hook("prompt", {"prompt": "continue"})
+        s2 = e.hook("sessionstart", {"source": "resume"})
+        st = e.hook_raw("stop", {"last_assistant_message": "Do you want to continue or start a new one?\n▶ Say continue or new."})
+        rc, o2 = e.run(["guide"])
+        rc3, o3 = e.run(["tasks"])
+        check("ガイド: 雛形が無くても hook とコマンドは壊れない（開く指示は出さない・ws.sh guide は雛形が無いと言う）",
+              "[CreateCodeBox" in json.loads(out)["hookSpecificOutput"]["additionalContext"] and EN["note.guide_open"] not in out and EN["rule.next"] in json.loads(out)["hookSpecificOutput"]["additionalContext"]
+              and "[CreateCodeBox" in json.loads(s2)["hookSpecificOutput"]["additionalContext"] and st[0] == 0 and st[1] == b""
+              and rc == 1 and "guide.template.html" in o2 and rc3 == 0, (out[:200], st, o2))
+        os.rename(tpl + ".off", tpl)
+        os.remove(page)
+        os.mkdir(page)  # writing the page now raises (a folder is in the way)
+        out = e.hook("prompt", {"prompt": "continue"})
+        st = e.hook_raw("stop", {"last_assistant_message": "Do you want to continue or start a new one?\n▶ Say continue or new."})
+        rc3, o3 = e.run(["tasks"])
+        check("ガイド: 書くときに例外が出ても hook とコマンドは壊れない", "[CreateCodeBox" in json.loads(out)["hookSpecificOutput"]["additionalContext"]
+              and st[0] == 0 and st[1] == b"" and rc3 == 0, (out[:200], st))
+    finally:
+        e.close()
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = build_to_run(e)
+        e.run(["render"])
+        e.prompt("continue")
+        d = gd_of(e)
+        check("ガイドのデータ: 作る段（5段目・作る手順の数・確認の数・表と計画と確認項目のリンク）",
+              shape_ok(d) and d["project"]["step"] == 5 and d["project"]["build"] == {"done": 0, "total": 3}
+              and d["project"]["checks"] == {"you_pass": 0, "you_total": 2, "claude_pass": 0, "claude_total": 2}
+              and [l["id"] for l in d["project"]["links"]] == ["prototype", "table", "plan", "checks", "schedule"]
+              and d["project"]["links"][1]["href"] == slug + "/design/io.html", d)
+        page = e.p("projects", "guide.data.js")
+        e.run(["mark", "S-01", "done", "--evidence", "ran it and it worked fine"])
+        check("ガイド: ws.sh のコマンドのあとでページが追いつく（mark のあとで done が1）", '"build": {"done": 1, "total": 3}' in open(page, encoding="utf-8").read())
+        e.write("projects/%s/src/index.html" % slug, "<html><body>app</body></html>")
+        e.run(["status"])
+        e.prompt("continue")
+        check("ガイドのデータ: アプリの index.html ができるとリンクに app が入る", {"id": "app", "href": slug + "/src/index.html"} in gd_of(e)["project"]["links"])
+        check("ガイド: 作る段でも、Bash で guide.html に書くコマンドは止まる", e.pre("Bash", command="python3 x.py projects/guide.html") is not None
+              and e.pre("Bash", command="cp a projects/guide.data.js") is not None)
+        for cmd in ("cd projects && cp %s/src/a.js guide.data.js" % slug, "cp projects/%s/src/a.js projects/GUIDE.DATA.JS" % slug, "cd projects && cp %s/src/a.html guide.html" % slug,
+                    "python3 make.py > projects/guide.data.js", "cat projects/guide.html", "cd projects && cp %s/src/a.html schedule.html" % slug,
+                    "cp x.html projects/%s/design/schedule.html" % slug):
+            check("ガイド: 作る段で、名前だけ（cd projects のあと）や大文字で指しても止まる（%s）" % cmd.split()[-1], EN["deny.guide_file"] in (e.pre("Bash", command=cmd) or ""), e.pre("Bash", command=cmd))
+        # a template mark typed by the user stays text (the marks are filled in one pass, and are escaped inside the data)
+        odd = 'a tool /*__WS_LABELS__*/null and /*__WS_DATA__*/null with </script> and /*__WS_TOKEN__*/"" in it'
+        e.set_fields(slug, what=odd)
+        e.run(["next"])
+        html = open(e.p("projects", "guide.html"), encoding="utf-8").read()
+        md = re.search(r'id="ws-data">(.*?)</script>', html, re.S)
+        ml = re.search(r'id="ws-labels">(.*?)</script>', html, re.S)
+        ok_data = ok_lab = False
+        try:
+            ok_data = json.loads(md.group(1))["project"]["goal"] == odd
+            ok_lab = json.loads(ml.group(1)).get("title") == EN["html.guide.title"]
+        except (ValueError, AttributeError, KeyError, TypeError):
+            pass
+        check("ガイド: 利用者の言葉に雛形の目印や </script> が入っていても、ページのデータと言葉は壊れない", ok_data and ok_lab, html[html.find('id="ws-data"'):][:300])
+        e.set_fields(slug, what="a small tool")
+    finally:
+        e.close()
+    if os.path.isfile(GUIDE_TEMPLATE):
+        t = open(GUIDE_TEMPLATE, encoding="utf-8").read()
+        m = re.search(r'id="ws-labels-default">(.*?)</script>', t, re.S)
+        default = json.loads(m.group(1).replace("\\u003c", "<")) if m else {}
+        want = {(k[len("html.common."):] if k.startswith("html.common.") else k[len("html.guide."):]): v
+                for k, v in EN.items() if k.startswith("html.common.") or k.startswith("html.guide.")}
+        used = set(re.findall(r"\bL\.([a-z_0-9]+)", t))
+        check("翻訳: guide の雛形の既定の言葉（英語）が en.py と同じで、雛形が使う言葉は全て入っている", default == want and used <= set(default),
+              (sorted(used - set(default)), sorted(set(want) - set(default))[:5], sorted(set(default) - set(want))[:5], [k for k in want if k in default and default[k] != want[k]][:3]))
+        check("翻訳④: guide の雛形に CJK が無い", not CJK_ALL.search(t))
+        check("ガイド: 雛形に置換の目印が全てある（データ・言葉・lang・フォント・noscript）", "/*__WS_DATA__*/null" in t and "/*__WS_LABELS__*/null" in t
+              and '<html lang="en">' in t and "/*__WS_FONT__*/" in t and "<!--ws-noscript-->" in t and "guide.data.js" in t and "__CCB_GUIDE__" in t)
+        check("ガイド: 雛形は、文の中のバッククォートの語を <code> の小さな枠にする。DOM の節で組み立て、innerHTML は使わない（文を HTML として読まない）",
+              "function rich(" in t and "createElement('code')" in t and "c.textContent = m[1]" in t and "innerHTML" not in t and "insertAdjacentHTML" not in t
+              and t.count("rich(el('p', 't-text'), v.text)") == 3 and "rich(n, L.lost_body)" in t)
+        check("ガイド: 雛形は外から何も読み込まない（外部のscript・font・@importなし）・自分で読み直す",
+              "https://" not in t and "http://" not in t.replace("http://www.w3.org/2000/svg", "") and "@import" not in t
+              and not re.search(r"<script[^>]*\ssrc=", t) and "setInterval" in t)
+    else:
+        print("SKIP guide.template.html is not in the repository yet: the label table check runs when it is")
+    g = {k[len("html.guide."):]: v for k, v in EN.items() if k.startswith("html.guide.")}
+    check("ガイドの言葉: 51個・{n} などの穴が en と ja で同じ・ja は全て日本語で埋まっている", len(g) == 51
+          and all(set(re.findall(r"\{(\w+)\}", EN[k])) == set(re.findall(r"\{(\w+)\}", JA.get(k, ""))) for k in EN if k.startswith("html.guide."))
+          and all(CJK_ALL.search(JA.get(k, "")) for k in EN if k.startswith("html.guide.")), len(g))
+
+
+def test_goal_question():
+    from lang import en as lang_en, ja as lang_ja
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    en = _engine_template
+    check("目的の質問: 「まだ」の表（en・ja）は当たり、ほかは当たらない",
+          all(en.is_goal_no(x) for x in ("not yet", "Not yet.", "no", "No!", "no, not yet", "まだ", "まだです", "まだです。", "いいえ", "いいえ、まだです"))
+          and not any(en.is_goal_no(x) for x in ("", "not yet, add a dark mode", "no way this is great", "yes", "まだ色が違う", "いいえ、できました", "nope it is fine")))
+    check("目的の質問: 「はい」の表は狭い（yes・yes it does・it does・はい・できた・届いた・そうです）。yes please・y・お願いします・ok は答えにしない",
+          all(en.is_goal_yes(x) for x in ("yes", "Yes.", "YES!", "yes it does", "Yes, it does.", "it does", "はい", "はい。", "できた", "できました", "届いた", "そうです", "はい、そうです"))
+          and not any(en.is_goal_yes(x) for x in ("", "y", "yes please", "yes, record it", "ok", "sure", "お願いします", "はい、お願いします", "うん", "yes but add a dark mode", "はい、動きます")),
+          [x for x in ("y", "yes please", "yes, record it", "ok", "お願いします", "はい、お願いします", "うん") if en.is_goal_yes(x)])
+    check("目的の質問: 返事が問いを出したかは、両方の答えの語で見る（yes と not yet・「はい」と「まだ」）",
+          en.goal_question_in("Does it do that? Reply yes or not yet.") and en.goal_question_in("▶ Answer YES or Not  Yet") and en.goal_question_in("「はい」か「まだ」で答えてください")
+          and not en.goal_question_in("Shall I start? Answer yes.") and not en.goal_question_in("Your app is ready.") and not en.goal_question_in("") and not en.goal_question_in(None)
+          and not en.goal_question_in("yesterday it was not yet there"))
+    q_en = EN["goal.q"].replace("{what}", "a small tool")
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = to_done(e)
+        name = "goal_%s.json" % slug
+        has = lambda: os.path.exists(e.p(".ws", name))
+        out = e.run(["status"])[1]
+        check("(前提) DONE で、目的の答えはまだ（status に1行）", e.stage() == "DONE" and EN["goal.state.none"] in out, out)
+        c = e.pctx("ok")
+        check("目的の質問: DONE で答えがまだなら、決まった質問を1回聞くよう文脈に入る（what つき・▶で答えを求める指示つき）",
+              EN["note.goal_ask"].replace("{question}", q_en) in c and "yes or not yet" in EN["note.goal_ask"], c[-900:])
+        check("目的の質問: 問いをまだ出していない間、次の一手は「足したい物を伝える」で、保留は立たない（入力だけでは開かない）",
+              "Next for the user: " + EN["next.done.idle"] in c and e.rec("session.json").get("goal_pending") is None and ns_of(e)["text"] == EN["next.done.idle"], c[-500:])
+        c = e.pctx("yes")
+        check("目的の質問: 問いを出す前の「yes」は記録しない（別の質問への返事かもしれない）", not has() and EN["note.goal_yes"] not in c, c[-300:])
+        e.hook("stop", {"last_assistant_message": "All checks passed.\n▶ Your app is ready."})
+        check("目的の質問: 問いを含まない返事で終わっても、保留は立たない", e.rec("session.json").get("goal_pending") is None)
+        e.pctx("yes")
+        check("目的の質問: そのあとの「yes」も記録しない", not has())
+        e.hook("stop", GOAL_Q_STOP)
+        sess = e.rec("session.json")
+        check("目的の質問: 返事が問いを出して終わると、保留が立つ（この入力の番号・設計のハッシュつき）・次の一手が問いになる",
+              (sess.get("goal_pending") or {}).get("slug") == slug and sess["goal_pending"]["n"] == sess["prompts"] and (sess.get("goal_put") or {}).get("slug") == slug
+              and ns_of(e)["text"] == EN["next.done.ask"] and gd_of(e)["project"]["next"]["text"] == EN["next.done.ask"], sess.get("goal_pending"))
+        e.pre("Bash", command="echo yes")
+        check("目的の質問: 道具の呼び出しは答えにならない・記録はAIが直接書けない", not has() and e.pre("Write", file_path=e.p(".ws", name), content="{}") is not None)
+        c = e.pctx("hmm, let me look at it first")
+        check("目的の質問: はい・まだ以外の返事では何も記録しない", not has() and EN["note.goal_yes"] not in c and EN["note.goal_no"] not in c)
+        e.run(["task", "none"])
+        c = e.pctx("Yes.")
+        check("目的の質問: 問いの次の入力でなければ記録しない（間に別の入力が入った）", not has())
+        for word in ("yes please", "y", "お願いします", "ok"):
+            e.hook("stop", GOAL_Q_STOP)
+            e.pctx(word)
+            check("目的の質問: 問いの直後でも、狭い表に無い返事（%s）は記録しない" % word, not has())
+        e.hook("stop", GOAL_Q_STOP)
+        c = e.pctx("Yes.")
+        rec = e.rec(name) if has() else {}
+        check("目的の質問: 問いの次の入力の「yes」で記録する（署名つき・reached true・設計のハッシュ・利用者の言葉）",
+              rec.get("reached") is True and "_sig" in rec and rec.get("quote") == "Yes." and len(rec.get("hash", "")) == 64 and EN["note.goal_yes"] in c, (rec, c[-300:]))
+        check("目的の質問: 記録のあとは triage を立てず、公開の合言葉の注意も出さない", not sorted_pending(e) and "send only the word" not in c)
+        out = e.run(["status"])[1]
+        rc, where = e.run(["where"])
+        rc, stl = e.run(["st", "list"])
+        d = gd_of(e)
+        check("目的の質問: status・where・st list・ガイドのデータに答えが出る（段は DONE のまま）", e.stage() == "DONE" and EN["goal.state.yes"] in out and EN["goal.state.yes"] in where
+              and EN["goal.state.yes"] in stl and d["project"]["goal_reached"] is True and d["project"]["next"]["kind"] == "done"
+              and d["project"]["next"]["text"] == EN["next.done.yes"].replace("{path}", "projects/%s/src/index.html" % slug), (out, d["project"]["next"]))
+        c = e.pctx("ok")
+        check("目的の質問: 答えたあとは聞かない", "Ask the user once, word for word" not in c)
+        # the latest of the user's own answers wins
+        c = e.pctx("no")
+        check("目的の質問: 「はい」のあとの、問いの無い「no」では変えない（別の質問への返事かもしれない）", e.rec(name)["reached"] is True)
+        e.run(["task", "none"])
+        c = e.pctx("not yet")
+        check("目的の質問: 間違えた「はい」は、あとの「not yet」で取り消せる（reached false・足りない物を聞く指示）", e.rec(name)["reached"] is False and EN["note.goal_no"] in c
+              and ns_of(e)["text"] == EN["next.done.no"], c[-300:])
+        c = e.pctx("yes")
+        check("目的の質問: 「まだ」のあとの、問いの無い「yes」は記録せず、もう一度問いを出させる", e.rec(name)["reached"] is False and "Ask the user once, word for word" in c)
+        c = e.pctx("it's finished now")
+        check("目的の質問: 「まだ」のあとで「it's finished now」と言えば reached true になる", e.rec(name)["reached"] is True and EN["note.goal_yes"] in c, c[-300:])
+        e.hook("stop", GOAL_Q_STOP)
+        e.pctx("not yet")
+        check("目的の質問: 問いが出ている間は、最後の答えが勝つ（true のあとの not yet → false）", e.rec(name)["reached"] is False)
+        e.hook("stop", GOAL_Q_STOP)
+        e.pctx("yes it does")
+        check("目的の質問: 問いが出ている間は、最後の答えが勝つ（false のあとの yes it does → true）", e.rec(name)["reached"] is True)
+        e.pctx("no, it does not do what I wanted")
+        check("目的の質問: 「作りたかった物と違う」と言えば false に変わる", e.rec(name)["reached"] is False)
+        e.run(["task", "none"])
+        e.pctx("it's finished")
+        check("(前提) もう一度 true にする", e.rec(name)["reached"] is True)
+        # the design changed: the answer no longer counts
+        io2 = {"rows": IO_EN["rows"] + [dict(IO_EN["rows"][1], id="IO-03", name="print")]}
+        e.write("projects/%s/design/io.json" % slug, json.dumps(io2))
+        out = e.engine_call("print(engine.goal_state(root, %r))" % slug)
+        check("目的の質問: 設計が変わると記録は無効になる（goal_state は None・ガイドのデータも null）", out.strip().endswith("None") and gd_of(e)["project"]["goal_reached"] is None, out)
+        rec = e.rec(name)
+        rec["reached"] = False
+        json.dump(rec, open(e.p(".ws", name), "w"))
+        e.write("projects/%s/design/io.json" % slug, json.dumps(IO_EN))
+        out = e.engine_call("print(engine.goal_state(root, %r))" % slug)
+        check("目的の質問: 記録を直接書き換えると（署名が合わない）答えは無かった扱い", out.strip().endswith("None"), out)
+    finally:
+        e.close()
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = to_done(e)
+        name = "goal_%s.json" % slug
+        # the turn that reaches DONE: ws.sh next gives the question to ask, and the reply that asks it opens the answer
+        rc, out = e.run(["next"])
+        check("目的の質問: DONE になったターンの ws.sh next は、次の一手に加えて、決まった質問を聞く指示を出す",
+              rc == 0 and "Next for the user: " + EN["next.done.idle"] in out and EN["note.goal_ask"].replace("{question}", q_en) in out, out)
+        e.hook("stop", {"last_assistant_message": "All checks passed. " + q_en + "\n▶ Answer yes or not yet."})
+        c = e.pctx("not yet")
+        rec = e.rec(name) if os.path.exists(e.p(".ws", name)) else {}
+        check("目的の質問: 「not yet」で reached false を記録し、足りない物を聞いて足す指示が出る（triage は立てない）",
+              rec.get("reached") is False and "_sig" in rec and EN["note.goal_no"] in c and not sorted_pending(e) and "task none" not in c, (rec, c[-400:]))
+        d = gd_of(e)
+        check("目的の質問: 「まだ」のあとの次の一手は、足りない物を伝える（kind は answer）・段は DONE のまま",
+              e.stage() == "DONE" and d["project"]["goal_reached"] is False and d["project"]["next"] == {"kind": "answer", "text": EN["next.done.no"], "say": ""}, d["project"])
+        check("目的の質問: status に「まだ」の答えが出る", EN["goal.state.no"] in e.run(["status"])[1])
+    finally:
+        e.close()
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = to_done(e)
+        c = e.pctx("please add a dark mode")
+        check("目的の質問: 新しい依頼のメッセージには、質問を重ねない（triage が先）", "Ask the user once, word for word" not in c and sorted_pending(e))
+    finally:
+        e.close()
+    e = Env()
+    try:
+        guide_fixture(e)
+        e.env["CREATECODEBOX_LANG"] = "ja"
+        slug = to_done(e)
+        name = "goal_%s.json" % slug
+        q_ja = JA["goal.q"].replace("{what}", "a small tool")
+        s = e.ctx("sessionstart", {"source": "startup"})
+        check("目的の質問: 新しい会話の始まりでは、問いを次の一手にしない（まだ聞いていないため）", "利用者が次にすること: " + JA["next.done.idle"] in s and JA["next.done.ask"] not in s, s[:600])
+        c = e.pctx("はい")
+        check("目的の質問: 新しい会話の最初の「はい」は記録しない・質問を聞く指示が出る", not os.path.exists(e.p(".ws", name)) and q_ja in c, c[-500:])
+        c = e.pctx("完成した")
+        check("目的の質問: 利用者が「完成した」と言えば、同じセッションでももう一度聞く", q_ja in c, c[-500:])
+        e.run(["task", "none"])
+        e.hook("stop", {"last_assistant_message": q_ja + "\n▶ 「はい」か「まだ」で答えてください。"})
+        c = e.pctx("迷った")
+        check("目的の質問: 迷ったの言葉は答えにならない（記録しない）", not os.path.exists(e.p(".ws", name)) and JA["note.lost"] in c)
+        e.hook("stop", {"last_assistant_message": "今は6段のうち6段目です。\n▶ アプリを開いて試してください。「はい」か「まだ」で答えてください。"})
+        c = e.pctx("まだです。")
+        check("目的の質問（ja）: ▶の行が「はい」か「まだ」を求めていれば、次の「まだです」で記録する",
+              os.path.exists(e.p(".ws", name)) and e.rec(name).get("reached") is False and JA["note.goal_no"] in c, c[-300:])
+        e.hook("stop", {"last_assistant_message": "直しました。\n▶ 「はい」か「まだ」で答えてください。"})
+        c = e.pctx("できた")
+        check("目的の質問（ja）: 「できた」で reached true", e.rec(name).get("reached") is True and JA["note.goal_yes"] in c, c[-300:])
+    finally:
+        e.close()
+
+
+def test_checks_a_person_can_do():
+    """F6: the user checks what they asked for, once each (the normal cases); the empty and failure cases are Claude's."""
+    from lang import en as lang_en, ja as lang_ja
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    en = _engine_template
+    # (the message, passed, failed, named but not recorded, "all of them")
+    table = [("1, 2 and 4 worked; 3 did not", {1, 2, 4}, {3}, set(), False), ("1-3 pass", {1, 2, 3}, set(), set(), False), ("3, 4 pass", {3, 4}, set(), set(), False),
+             ("1, 2 pass but not 3", {1, 2}, {3}, set(), False), ("3 did not work, 1 and 2 are fine", {1, 2}, {3}, set(), False),
+             ("1, 2 ok. 3 failed: the total was wrong", {1, 2}, {3}, set(), False), ("1と2は合格、3はだめ", {1, 2}, {3}, set(), False),
+             ("1 2 4", set(), set(), {1, 2, 4}, False), ("T-IO-01-N1 pass", set(), set(), set(), False), ("", set(), set(), set(), False),
+             # the sentences from real sessions: a range is every number in it
+             ("1から7まで全部できました。", set(range(1, 8)), set(), set(), False), ("1から10まで全部できた", set(range(1, 11)), set(), set(), False),
+             ("1と2と3と4と5と6と7はできた", set(range(1, 8)), set(), set(), False),
+             ("1, 2, 3, 4, 5, 6 and 7 all worked. I did check 4 first before tapping anything.", set(range(1, 8)), set(), set(), False),
+             ("1と2と4はできた。3はだめ", {1, 2, 4}, {3}, set(), False),
+             ("1-7 ok", set(range(1, 8)), set(), set(), False), ("1–7 ok", set(range(1, 8)), set(), set(), False), ("1~7 ok", set(range(1, 8)), set(), set(), False),
+             ("1〜7できた", set(range(1, 8)), set(), set(), False), ("1 to 7 worked", set(range(1, 8)), set(), set(), False),
+             ("1 through 7 worked", set(range(1, 8)), set(), set(), False), ("1から7はできた", set(range(1, 8)), set(), set(), False),
+             ("1番から7番まで大丈夫", set(range(1, 8)), set(), set(), False),
+             # a check the user says failed is never recorded as passed
+             ("1 and 2 pass, 3 shows an error", {1, 2}, {3}, set(), False), ("1 and 2 pass. 3 crashed", {1, 2}, {3}, set(), False),
+             ("1 pass, 2 pass, I couldn't do 3", {1, 2}, {3}, set(), False), ("1と2は合格、3はできませんでした", {1, 2}, {3}, set(), False),
+             ("3は動きません", set(), {3}, set(), False), ("3は表示されない", set(), {3}, set(), False), ("3は動かなかった", set(), {3}, set(), False),
+             ("1 passed: I added 3 coffees and saw the total", {1}, set(), set(), False), ("3 isn't working, the rest is fine", set(), {3}, set(), False),
+             ("1と2はできたけど3はできなかった", {1, 2}, {3}, set(), False), ("1と2は問題ない", {1, 2}, set(), set(), False), ("3は不合格", set(), {3}, set(), False),
+             # "all … but N": every listed number except N
+             ("all pass but 3", set(), set(), {3}, True), ("all but 3 passed", set(), set(), {3}, True), ("all pass except 2", set(), set(), {2}, True),
+             ("everything works except 3", set(), set(), {3}, True), ("3以外は全部できた", set(), set(), {3}, True), ("all pass but 3 failed", set(), {3}, set(), True),
+             ("all worked", set(), set(), set(), True), ("they all work", set(), set(), set(), True), ("全部できた", set(), set(), set(), True), ("all pass", set(), set(), set(), True),
+             ("all failed", set(), set(), set(), False), ("not all passed", set(), set(), set(), False), ("全部できなかった", set(), set(), set(), False)]
+    got = lambda t: (lambda r: (r["passed"], r["failed"], r["other"], r["bulk"]))(en.read_answer(t))
+    bad = [(t, got(t)) for t, p, f, o, b in table if got(t) != (p, f, o, b)]
+    check("確認の答え: 番号に付いた言葉で、できた・できなかった・どちらとも言っていない番号を分ける（%d文・範囲は全部の番号・失敗と言った番号は合格にしない）" % len(table), not bad, bad[:4])
+    check("確認の答え: 番号と「できた」の語だけのメッセージは、タスクの表に回さない（できなかった番号や説明のある物は、困りごととして回す）",
+          all(en.trivial_prompt(t) for t in ("1, 2 and 4 worked", "1から7まで全部できました。", "全部できた", "all worked", "1-3 OK", "1と2と4はできた", "1 to 7 are fine"))
+          and not any(en.trivial_prompt(t) for t in ("1, 2 and 4 worked; 3 did not", "1と2と4はできた。3はだめ", "1 worked; 2 did not, the report was empty", "all pass except 2",
+                                                     "1 and 2 pass, and please add a dark mode", "all worked, now add a login page")))
+    e = Env()
+    try:
+        guide_fixture(e)
+        io = {"rows": [dict(IO_EN["rows"][0], kind="screen", screen="SC-1"), IO_EN["rows"][1], IO_SCHED]}
+        e.hook("sessionstart", {"source": "startup"})
+        e.prompt("make a small tool")
+        e.run(["new", "app", "--name", "App", "--quote", "make a small tool"])
+        slug = "01_app"
+        e.set_fields(slug, goal_type="self", what="a small tool", who="me", today="by hand", done_when="it works", not_doing="nothing else", has_ui="no", references="none")
+        e.write("projects/%s/design/ui/sketch.html" % slug, SKETCH)
+        e.write("projects/%s/design/io.json" % slug, json.dumps(io))
+        e.prompt("approve")
+        e.run(["schedule-init"])
+        rows = e.rec("st_%s.json" % slug)["rows"]
+        who = {r["id"]: r["who"] for r in rows}
+        check("誰が確かめるか: 利用者は、人が試せる行の正常系だけ（空・失敗・時間で動く物は Claude）",
+              who == {"T-IO-01-N1": "user", "T-IO-01-B1": "ai", "T-IO-01-F1": "ai", "T-IO-02-N1": "user", "T-IO-02-F1": "ai", "T-IO-03-N1": "ai", "T-IO-03-F1": "ai"}, who)
+        e.prompt("continue")
+        sched = e.rec("schedule_%s.json" % slug)["rows"]
+        for r in sched[:-1]:
+            e.run(["mark", r["id"], "done", "--evidence", "ran it and it worked fine"])
+        check("次の一手: 作る行が済むと、利用者の確認が何件残っているかを言う（2件）", ns_of(e) == {"kind": "check", "text": EN["next.run.check"].replace("{n}", "2"), "say": ""}, ns_of(e))
+        rc, out = e.run(["st", "list", "--numbered"])
+        lines = out.strip().splitlines()
+        check("st list --numbered: 利用者のケースだけが 1 から並び、Claude の分は件数の1行（5件のうち0件）",
+              rc == 0 and lines[0].startswith("1. T-IO-01-N1 ") and lines[1].startswith("2. T-IO-02-N1 ") and not any(re.match(r"^3\. ", l) for l in lines)
+              and EN["st.list.claude"].replace("{n}", "5").replace("{p}", "0") in out and e.rec("session.json")["numbered"] == {"1": "T-IO-01-N1", "2": "T-IO-02-N1"}, out)
+        rc, out = e.run(["st", "list"])
+        check("st list（番号なし）: 全てのケースが出る（Claude が自分の分を見るため）", rc == 0 and all(i in out for i in who), out)
+        e.run(["st", "list", "--numbered"])
+        e.pctx("1 worked; 2 did not, the report was empty")
+        rc, out = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
+        st = {r["id"]: r for r in e.rec("st_%s.json" % slug)["rows"]}
+        check("確認の答え: 「1 worked; 2 did not」は 1 だけを合格にし、2 は合格にしなかったと出す",
+              rc == 0 and st["T-IO-01-N1"]["status"] == "pass" and st["T-IO-02-N1"]["status"] == "todo" and "recorded: T-IO-01-N1" in out
+              and EN["st.numbered.failed"].replace("{ids}", "2 (T-IO-02-N1)") in out, out)
+        check("次の一手: 残りが1件なら、その1件を試すと言う", ns_of(e) == {"kind": "check", "text": EN["next.run.check1"], "say": ""}, ns_of(e))
+        e.pctx("2 did not work")
+        rc, out = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
+        check("確認の答え: できなかった番号だけの返事では、何も合格にしない（終了コード 1・理由つき）",
+              rc == 1 and EN["st.numbered.failed"].replace("{ids}", "2 (T-IO-02-N1)") in out and e.rec("st_%s.json" % slug)["rows"][3]["status"] == "todo", out)
+        e.run(["st", "mark", "T-IO-02-N1", "fail", "--by", "user", "--evidence", "the report was empty"])
+        check("次の一手: 利用者の確認で失敗が残る間は、Claude が直していると言う（待つ）", ns_of(e) == {"kind": "wait", "text": EN["next.run.fix"].replace("{n}", "1"), "say": ""}, ns_of(e))
+        e.run(["st", "mark", "T-IO-02-N1", "todo"])
+        e.run(["st", "list", "--numbered"])
+        e.pctx("all pass except 2")
+        rc, out = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
+        rc2, out2 = e.run(["st", "mark", "T-IO-02-N1", "pass", "--by", "user"])
+        check("確認の答え: 「all pass except 2」は 2 を合格にしない（ほかは合格・2 は記録していないと出す・ID を指しても通らない）",
+              rc == 0 and "recorded: T-IO-01-N1" in out and EN["st.numbered.unclear"].replace("{ids}", "2 (T-IO-02-N1)") in out and rc2 != 0
+              and e.rec("st_%s.json" % slug)["rows"][3]["status"] == "todo", (out, out2))
+        e.pctx("all pass")
+        rc, out = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
+        st = {r["id"]: r for r in e.rec("st_%s.json" % slug)["rows"]}
+        check("確認の答え: 「all pass」は、番号つきの一覧（利用者のケース）を全部まとめて合格にする（Claude のケースには触れない）",
+              rc == 0 and st["T-IO-01-N1"]["status"] == "pass" and st["T-IO-02-N1"]["status"] == "pass" and st["T-IO-02-N1"].get("bulk") is True
+              and all(st[i]["status"] == "todo" for i in ("T-IO-01-B1", "T-IO-01-F1", "T-IO-02-F1", "T-IO-03-N1", "T-IO-03-F1")), out)
+        check("次の一手: 利用者の確認が済んでも段が RUN のままなら、足りない1つを言う（手で試せない正常系が1件）",
+              e.stage() == "RUN" and ns_of(e) == {"kind": "wait", "text": EN["next.run.claude"].replace("{n}", "1"), "say": ""}, ns_of(e))
+        shot = e.p("projects", slug, "knowledge", "s.png")
+        open(shot, "wb").write(b"\x89PNG\r\n" + b"0" * 400)
+        e.run(["st", "mark", "T-IO-03-N1", "pass", "--by", "ai", "--evidence", "the monthly job ran and wrote a file", "--shot", shot])
+        check("次の一手: 条件が全部そろって最後の行だけ残るときは、Claude が最後の手順を済ませていると言う",
+              e.stage() == "RUN" and ns_of(e) == {"kind": "wait", "text": EN["next.run.close"], "say": ""}, ns_of(e))
+        rc, out = e.run(["mark", sched[-1]["id"], "done", "--evidence", "every case the user checks really came out"])
+        out = e.run(["status"])[1]
+        check("最初の版: 利用者が頼んだことを1回ずつ確かめれば完成（Claude の空・失敗のケース4件が未確認でも止めない）",
+              rc == 0 and e.stage() == "DONE" and "You checked: 2/2. Claude will check: 1/5 (the empty and failure cases, and things you can't trigger by hand). Not yet checked: 4." in out, out)
+        # a list that exists keeps who checks each case
+        e.engine_call("d = engine.st_load(root, %r)\nfor r in d['rows']:\n    r['who'] = 'user'\nengine.st_save(root, %r, d)" % (slug, slug))
+        e.engine_call("engine.st_init(root, %r, 'App')" % slug)
+        check("誰が確かめるか: すでにある一覧は、保存された who を保つ（付け替えない）", all(r["who"] == "user" for r in e.rec("st_%s.json" % slug)["rows"]))
+    finally:
+        e.close()
+    for code, tbl in (("en", EN), ("ja", JA)):
+        r = tbl["rule.RUN"]
+        check("規則（%s）: 作る行が済んだら、アプリを開く・確認は番号つきの1つの一覧・答えは番号でまとめて・設定やFinderを頼まない・Claude の分は止めない" % code,
+              "ws.sh open projects/<" in r and "st list --numbered`" in r and "st route <ID> ai" in r
+              and ("Never ask for one check per turn" in r if code == "en" else "1ターンに1件ずつ聞いてはいけません" in r)
+              and ("browser settings" in r and "Finder" in r and "do not block the first version" in r if code == "en" else "ブラウザの設定" in r and "Finder" in r and "止めません" in r), r[-400:])
+    for code in ("en", "ja"):
+        t = open(os.path.join(TEMPLATE, "ws", "learn", code, "systemtest.md"), encoding="utf-8").read()
+        check("学びカード（%s）: 誰が何を確かめるかが今の割り当てに合っている（あなたは頼んだことを1回ずつ・空と失敗は Claude）" % code,
+              ("once each" in t and "empty and failure cases" in t) if code == "en" else ("1回ずつ" in t and "空っぽや失敗のケース" in t), t[:200])
+    pm = open(os.path.join(TEMPLATE, ".claude", "agents", "pm.md"), encoding="utf-8").read()
+    sk = open(os.path.join(TEMPLATE, ".claude", "skills", "ws-build", "SKILL.md"), encoding="utf-8").read()
+    check("pm.md と ws-build: 確認は1つの番号つきの一覧で・1ターンに1件ずつ聞かない・ブラウザの設定を頼まない",
+          all("one numbered list" in t and "one check per turn" in t and "browser settings" in t for t in (pm, sk)))
+
+
+# ---------- 0.5.0 round 2: the user's word to finish, ws.sh try, checks after DONE, the look kit ----------
+def test_accept_finish():
+    """R2-2: the user's own word ends the build stage as it is, when the app exists and the user's own checks are all passed."""
+    from lang import en as lang_en, ja as lang_ja
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    en = _engine_template
+    check("完成にする: 決まった言葉だけ（finish・finish as it is・use it as it is・完成にする・このまま使う・これで完成）。否定や混ぜ物は当たらない",
+          all(en.is_finish(x) for x in ("finish", "Finish.", "finish as it is", "use it as it is", "ok, finish", "完成にする", "完成にします。", "このまま使う", "これで完成"))
+          and not any(en.is_finish(x) for x in ("", "finished", "finish it but fix the colour", "don't finish", "finish the export feature", "完成", "まだ完成にしない", "yes", "continue")))
+    for code, tbl, word in (("en", EN, "use it as it is"), ("ja", JA, "完成にする")):
+        e = Env()
+        try:
+            e.env["CREATECODEBOX_LANG"] = code
+            guide_fixture(e)
+            slug = build_to_run(e)
+            name = "accept_%s.json" % slug
+            e.prompt("continue")
+            e.prompt("ok")
+            c = e.pctx(word)
+            check("完成にする（%s）: アプリも利用者の確認もまだなら記録しない（何が要るかを伝える・triage は立てない）" % code,
+                  not os.path.exists(e.p(".ws", name)) and tbl["note.accept_needs"].replace("{p}", "0").replace("{t}", "2") in c and e.stage() == "RUN" and not sorted_pending(e), c[-400:])
+            e.write("projects/%s/src/index.html" % slug, "<html><body>app</body></html>")
+            e.run(["st", "list", "--numbered"])
+            e.pctx("all worked")
+            rc, out = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
+            check("(前提・%s) 利用者の確認は全部合格・作る行と Claude の確認は残っている・段は RUN" % code, rc == 0 and e.stage() == "RUN", out)
+            out = e.hook("stop", {"last_assistant_message": "I have no tool to run my own checks.\n▶ x"})
+            check("完成にする（%s）: Claude の仕事が残ったまま止まろうとすると1回止める。その文に、止まったあと利用者に出る言葉（finish）が入る" % code,
+                  out and tbl["word.finish"] in json.loads(out)["reason"] and tbl["word.continue"] in json.loads(out)["reason"], out)
+            out = e.hook("stop", {"last_assistant_message": "I could not run my own checks.\n▶ x"})
+            want = {"kind": "say", "say": tbl["word.finish"],
+                    "text": tbl["next.paused_finish"].replace("{n}", "2").replace("{go}", tbl["word.continue"]).replace("{finish}", tbl["word.finish"])}
+            check("完成にする（%s）: Stop が通ったあとの次の一手は、続けさせる言葉と、未確認のまま完成にする言葉の両方（ガイドのデータ・ws.sh next とも）" % code,
+                  out == "" and gd_of(e)["project"]["next"] == want and tbl["word.finish"] in e.run(["next"])[1], gd_of(e)["project"]["next"])
+            c = e.pctx("finish it but fix the colour first" if code == "en" else "完成にするけど色を直して")
+            check("完成にする（%s）: 混ぜ物のある文では記録しない" % code, not os.path.exists(e.p(".ws", name)) and e.stage() == "RUN")
+            e.run(["task", "none"])
+            check("完成にする（%s）: 記録はAIが直接書けない（.ws/ は保護）・記録するコマンドは無い" % code,
+                  e.pre("Write", file_path=e.p(".ws", name), content="{}") is not None and e.run(["finish"])[0] == 2 and not os.path.exists(e.p(".ws", name)))
+            c = e.pctx(word)
+            rec = e.rec(name) if os.path.exists(e.p(".ws", name)) else {}
+            line = tbl["stage.accepted"].replace("{n}", "2").replace("{rows}", "3")
+            check("完成にする（%s）: 利用者の言葉で記録する（署名つき・設計のハッシュ・言葉）。段は DONE になり、残した数を正直に出す" % code,
+                  "_sig" in rec and len(rec.get("hash", "")) == 64 and rec.get("quote") == word and e.stage() == "DONE"
+                  and tbl["note.recorded.accept"] in c and line in c and not sorted_pending(e), (rec, c[-500:]))
+            st_out = e.run(["status"])[1]
+            rc, where = e.run(["where"])
+            rc, stl = e.run(["st", "list"])
+            d = gd_of(e)["project"]
+            check("完成にする（%s）: status・where・st list に残した数の1行。ガイドのデータは6段目で、作る数と Claude の確認の数がそのまま出る" % code,
+                  line in st_out and line in where and line in stl and d["step"] == 6 and d["build"] == {"done": 0, "total": 3}
+                  and d["checks"] == {"you_pass": 2, "you_total": 2, "claude_pass": 0, "claude_total": 2} and d["next"]["kind"] == "answer", (st_out, d))
+            c = e.pctx("ok")
+            check("完成にする（%s）: そのあとは、ほかの DONE と同じく目的の質問が続く" % code, tbl["note.goal_ask"].split("{question}")[0] in c, c[-500:])
+            io2 = {"rows": IO_EN["rows"] + [dict(IO_EN["rows"][1], id="IO-03", name="print")]}
+            e.write("projects/%s/design/io.json" % slug, json.dumps(io2))
+            check("完成にする（%s）: 設計が変わると記録は無効（承認待ちに戻る）" % code, e.stage() == "R4A", e.stage())
+            e.write("projects/%s/design/io.json" % slug, json.dumps(IO_EN))
+            rec = e.rec(name)
+            rec["quote"] = "x"
+            json.dump(rec, open(e.p(".ws", name), "w"))
+            check("完成にする（%s）: 記録を直接書き換えると（署名が合わない）無かった扱い（RUN に戻る）" % code, e.stage() == "RUN", e.stage())
+        finally:
+            e.close()
+    e = Env()
+    try:
+        slug = to_r4a(e, "en")
+        c = e.pctx("finish")
+        check("完成にする: 作る段より前では何も起きない（記録なし・注意も出さない）", not os.path.exists(e.p(".ws", "accept_%s.json" % slug)) and EN["note.accept_needs"][:30] not in c and e.stage() == "R4A")
+    finally:
+        e.close()
+
+
+FAKE_BROWSER = r"""#!%s
+import json, os, sys, urllib.parse, urllib.request
+args = sys.argv[1:]
+log = os.environ.get("FAKE_LOG")
+if log:
+    open(log, "a").write(json.dumps(args) + "\n")
+if os.environ.get("FAKE_FAIL_NEW") and "--headless=new" in args:
+    sys.exit(1)
+path = urllib.request.url2pathname(urllib.parse.urlparse(args[-1]).path)
+page = open(path, encoding="utf-8").read()
+prof = [a for a in args if a.startswith("--user-data-dir=")][0].split("=", 1)[1]
+open(os.path.join(prof, "used"), "w").write("x")
+if os.environ.get("FAKE_COPY"):
+    open(os.environ["FAKE_COPY"], "w", encoding="utf-8").write(page)
+if "--dump-dom" in args:
+    out = os.environ.get("FAKE_OUT", '{"ok": true, "result": {"n": 2}, "console": ["hello from the page"]}')
+    if os.environ.get("FAKE_NO_OUT"):
+        sys.stdout.write(page)
+    else:
+        sys.stdout.write(page.replace("</body>", '<pre id="ccb-try-out" style="display: none;">' + out.replace("&", "&amp;").replace("<", "&lt;") + "</pre></body>"))
+for a in args:
+    if a.startswith("--screenshot="):
+        open(a.split("=", 1)[1], "wb").write(b"\x89PNG\r\n\x1a\n" + b"0" * 400)
+"""
+TRY_PAGE = ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Coffee log</title><style>body{font:18px system-ui}</style></head>"
+            "<body><h1>Coffee log</h1><p id=\"total\">This week: 0 cups</p><p id=\"empty\">No coffee yet. Add your first one.</p>"
+            "<p hidden>this line is hidden</p><button id=\"add\">Add a latte</button>"
+            "<script>var items = JSON.parse(localStorage.getItem('coffee') || '[]');"
+            "function draw(){document.getElementById('total').textContent='This week: '+items.length+' cups';document.getElementById('empty').hidden=items.length>0;console.log('drawn', items.length);}"
+            "document.getElementById('add').onclick=function(){items.push('latte');localStorage.setItem('coffee', JSON.stringify(items));draw();};draw();</script></body></html>")
+
+
+def test_try():
+    """R2-3: ws.sh try runs a page of the project in a browser without a window, and says what came out."""
+    from lang import en as lang_en, ja as lang_ja
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    en = _engine_template
+    injected = en.try_inject("<!doctype html><html><head><title>t</title><script>var own = 1;</script></head><body><p>x</p></body></html>",
+                             "window.B = '</script><b>';", "return document.title; // </SCRIPT>")
+    order = [injected.find(x) for x in ("ccb-try: console lines", "ccb-try: --before", "var own = 1;", "<p>x</p>", "ccb-try: --after", "</body>")]
+    check("try: 差し込む順は、コンソールの受け口 → --before → ページ自身の script → 本文 → --after → </body>（--before は head の最初の script）",
+          all(i >= 0 for i in order) and order == sorted(order) and injected.find("<head>") < order[0], order)
+    check("try: 差し込むコードの中の </script> は、ページを切らない形にする", "</script><b>" not in injected and "<\\/script><b>" in injected and "// <\\/script>" in injected.lower())
+    check("try: head も body も無いページにも差し込める", en.try_inject("<p>x</p>", None, None).startswith("<script>/* ccb-try: console") and "ccb-try: --after" in en.try_inject("<p>x</p>", None, None))
+    check("try: ページの文字は、script・style・タグ・隠した要素を除いた物", en.page_text("<html><head><title>T</title><style>p{}</style></head><body><h1>Hi &amp; you</h1>"
+          "<p hidden>secret</p><div style=\"display: none\">gone</div><p>One<br>Two</p><script>var a='zzz'</script></body></html>") == "Hi & you\nOne\nTwo")
+    if os.name == "nt":
+        print("SKIP the fake browser test needs a POSIX shell script")
+        return
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = build_to_run(e)
+        e.prompt("continue")
+        e.prompt("ok")
+        fake = os.path.join(e.tmp, "fake-browser")
+        open(fake, "w").write(FAKE_BROWSER % sys.executable)
+        os.chmod(fake, 0o755)
+        log, copy = os.path.join(e.tmp, "fake.log"), os.path.join(e.tmp, "copy.html")
+        e.env.update(CREATECODEBOX_BROWSER=fake, FAKE_LOG=log, FAKE_COPY=copy)
+        page = "projects/%s/src/index.html" % slug
+        e.write(page, TRY_PAGE)
+        e.write("projects/%s/src/t/before.js" % slug, "localStorage.setItem('coffee', JSON.stringify(['espresso']));\n")
+        e.write("projects/%s/src/t/after.js" % slug, "document.getElementById('add').click();\nreturn {n: 2};\n")
+        rc, out = e.run(["try", page, "--before", "projects/%s/src/t/before.js" % slug, "--after", "projects/%s/src/t/after.js" % slug])
+        runs = [json.loads(l) for l in open(log).read().splitlines()]
+        shots = sorted(os.listdir(e.p("projects", slug, "evidence"))) if os.path.isdir(e.p("projects", slug, "evidence")) else []
+        check("try: 終了コード 0。ブラウザの名前・--after の結果・コンソールの行・ページの文字・スクリーンショットの場所を出す",
+              rc == 0 and "Browser: fake-browser" in out and "Page: %s (loaded)" % page in out and 'Result of the --after script: {"n": 2}' in out
+              and "Console lines:\n  hello from the page" in out and "Coffee log" in out and "Add a latte" in out and "this line is hidden" not in out and "localStorage" not in out
+              and len(shots) == 1 and re.match(r"^try-\d{8}-\d{6}\.png$", shots[0]) and "Screenshot: projects/%s/evidence/%s" % (slug, shots[0]) in out, out)
+        check("try: ブラウザは2回動かす（--dump-dom と --screenshot）。画面なし・新しい空のプロファイル・決まった引数・file:// のアドレスだけ",
+              len(runs) == 2 and "--dump-dom" in runs[0] and any(a.startswith("--screenshot=") for a in runs[1])
+              and all(r[0] == "--headless=new" and "--no-first-run" in r and "--no-default-browser-check" in r and "--disable-gpu" in r and "--hide-scrollbars" in r
+                      and "--window-size=1280,800" in r and "--virtual-time-budget=3000" in r and r[-1].startswith("file://") for r in runs)
+              and len({[a for a in r if a.startswith("--user-data-dir=")][0] for r in runs}) == 2, runs)
+        profs = [[a for a in r if a.startswith("--user-data-dir=")][0].split("=", 1)[1] for r in runs]
+        left = [f for f in os.listdir(e.p("projects", slug, "src")) if f.startswith(".ccb-try")]
+        check("try: 後片付け（一時のページとプロファイルを消す・元のページは変えない）", not left and not any(os.path.exists(x) for x in profs)
+              and open(e.p(page), encoding="utf-8").read() == TRY_PAGE, (left, profs))
+        got = open(copy, encoding="utf-8").read()
+        check("try: ブラウザに渡したページには --before と --after のコードが入っている（元のページと同じフォルダに置く）",
+              "localStorage.setItem('coffee', JSON.stringify(['espresso']));" in got and "document.getElementById('add').click();" in got
+              and got.find("ccb-try: --before") < got.find("var items = JSON.parse") < got.find("ccb-try: --after")
+              and os.path.dirname(runs[0][-1]).endswith("/src"), got[:200])
+        shot_rel = "projects/%s/evidence/%s" % (slug, shots[0])
+        e.run(["st", "route", "T-IO-01-F1", "ai", "--reason", "needs a broken file"])
+        rc, out = e.run(["st", "mark", "T-IO-01-F1", "pass", "--by", "ai", "--shot", e.p(shot_rel), "--evidence", "a broken file shows the message"])
+        check("try: できた画像は、Claude が確かめるケースの証拠（st mark --by ai --shot）にそのまま使える", rc == 0 and "recorded: T-IO-01-F1" in out, out)
+        check("try: AI は evidence/ に直接は書けない（画像は try か道具が作った物）", e.pre("Write", file_path=e.p("projects", slug, "evidence", "x.png"), content="x") is not None)
+        open(log, "w").close()
+        rc, out = e.run(["try", page, "--size", "420x700", "--wait", "500", "--shot", "projects/%s/knowledge/shot.png" % slug])
+        runs = [json.loads(l) for l in open(log).read().splitlines()]
+        check("try: --size・--wait・--shot がブラウザの引数と出力先に反映される（--after が無ければ結果の行は出さない）",
+              rc == 0 and all("--window-size=420,700" in r and "--virtual-time-budget=500" in r for r in runs) and os.path.isfile(e.p("projects", slug, "knowledge", "shot.png"))
+              and "Screenshot: projects/%s/knowledge/shot.png" % slug in out and "Result of the --after script" not in out, out)
+        open(log, "w").close()
+        e.env["FAKE_FAIL_NEW"] = "1"
+        rc, out = e.run(["try", page])
+        modes = [json.loads(l)[0] for l in open(log).read().splitlines()]
+        check("try: 新しい headless が動かなければ、古い --headless で動かす", rc == 0 and modes == ["--headless=new", "--headless", "--headless=new", "--headless"], modes)
+        e.env.pop("FAKE_FAIL_NEW")
+        e.env["FAKE_OUT"] = '{"ok": false, "error": "TypeError: x is not a function", "console": []}'
+        rc, out = e.run(["try", page, "--after", "projects/%s/src/t/after.js" % slug])
+        check("try: --after が例外を投げたら終了コード 1 と、その内容", rc == 1 and "The --after script failed: TypeError: x is not a function" in out, out)
+        e.env.pop("FAKE_OUT")
+        e.env["FAKE_NO_OUT"] = "1"
+        rc, out = e.run(["try", page])
+        check("try: ページの読み込みが終わらなければ終了コード 1（結果は返ってこなかったと出す）", rc == 1 and "did not finish loading" in out, out)
+        e.env.pop("FAKE_NO_OUT")
+        outside = os.path.join(e.tmp, "o.js")
+        open(outside, "w").write("return 1;")
+        e.write("projects/%s/knowledge/a.html" % slug, "<html></html>")
+        e.write("projects/%s/src/a.txt" % slug, "x")
+        e.write("projects/02_other/PROJECT.md", "# Name: Other\n")
+        e.write("projects/02_other/src/index.html", "<html></html>")
+        bad = {"README.md": (["try", "README.md"], 1, EN["open.bad_place"]), "knowledge/": (["try", "projects/%s/knowledge/a.html" % slug], 1, EN["open.bad_place"]),
+               "another project": (["try", "projects/02_other/src/index.html"], 1, EN["open.bad_place"]),
+               "../ out of the project": (["try", "projects/%s/src/../../../README.md" % slug], 1, EN["open.bad_place"]),
+               "not html": (["try", "projects/%s/src/a.txt" % slug], 1, EN["try.bad_type"]), "no such file": (["try", "projects/%s/src/none.html" % slug], 1, EN["open.no_file"]),
+               "a web address": (["try", "https://example.com/index.html"], 2, EN["try.local_only"]), "a file:// address": (["try", "file:///etc/passwd"], 2, EN["try.local_only"]),
+               "script outside the project": (["try", page, "--after", outside], 1, EN["try.bad_script"].replace("{name}", "--after")),
+               "script that does not exist": (["try", page, "--before", "projects/%s/src/none.js" % slug], 1, EN["try.bad_script"].replace("{name}", "--before")),
+               "picture outside the project": (["try", page, "--shot", os.path.join(e.tmp, "x.png")], 1, EN["try.bad_shot"]),
+               "picture into the records": (["try", page, "--shot", "projects/%s/design/evidence/T-IO-01-N1.png" % slug], 1, EN["try.bad_shot"]),
+               "picture that is not a png": (["try", page, "--shot", "projects/%s/src/index.html" % slug], 1, EN["try.bad_shot"]),
+               "bad size": (["try", page, "--size", "big"], 2, EN["try.usage"]), "unknown option": (["try", page, "--url", "x"], 2, EN["try.usage"]),
+               "no page": (["try"], 2, EN["try.usage"])}
+        open(log, "w").close()
+        for name, (args, want_rc, text) in bad.items():
+            rc, out = e.run(args)
+            check("try: 断る（%s）" % name, rc == want_rc and text in out, (rc, out))
+        check("try: 断ったときはブラウザを動かさない・一時のページも残さない", open(log).read() == "" and open(e.p(page), encoding="utf-8").read() == TRY_PAGE
+              and not [f for f in os.listdir(e.p("projects", slug, "src")) if f.startswith(".ccb-try")])
+        e.env["CREATECODEBOX_BROWSER"] = os.path.join(e.tmp, "no-such-browser")
+        before = sorted(os.listdir(e.p("projects", slug, "evidence")))
+        rc, out = e.run(["try", page])
+        check("try: ブラウザが見つからないときは終了コード 3 と1文（入れ方は案内しない・未確認のまま、と伝える）・何も書かない",
+              rc == 3 and out.strip() == EN["try.no_browser"] and "install" not in out.lower() and sorted(os.listdir(e.p("projects", slug, "evidence"))) == before, out)
+        e.env["CREATECODEBOX_LANG"] = "ja"
+        rc, out = e.run(["try", page])
+        check("try（ja）: 見つからないときの文は日本語の表の文", rc == 3 and out.strip() == JA["try.no_browser"], out)
+        e.env["CREATECODEBOX_BROWSER"] = fake
+        rc, out = e.run(["try", page])
+        check("try（ja）: 出力の見出しは日本語の表の文", rc == 0 and "ブラウザ: fake-browser" in out and JA["try.text"] in out and "スクリーンショット: projects/" in out, out)
+        e.env.pop("CREATECODEBOX_LANG")
+        e.pctx("Please add an export to CSV")
+        check("try: hook は ws.sh try を通す（triage 中も）・記号つきは止める・permissions.allow にある",
+              e.pre("Bash", command="bash ws/bin/ws.sh try %s --size 420x700" % page) is None and e.pre("Bash", command="bash ws/bin/ws.sh try %s > out.txt" % page) is not None
+              and "Bash(bash ws/bin/ws.sh try:*)" in json.load(open(e.p(".claude", "settings.json")))["permissions"]["allow"])
+    finally:
+        e.close()
+    e = Env()
+    try:
+        guide_fixture(e)
+        fake = os.path.join(e.tmp, "fake-browser")
+        open(fake, "w").write(FAKE_BROWSER % sys.executable)
+        os.chmod(fake, 0o755)
+        e.env["CREATECODEBOX_BROWSER"] = fake
+        e.hook("sessionstart", {"source": "startup"})
+        e.prompt("make a booking page")
+        e.run(["new", "book", "--name", "Book", "--quote", "make a booking page"])
+        e.write("projects/01_book/design/ui/sketch.html", SKETCH)
+        rc, out = e.run(["try", "projects/01_book/design/ui/sketch.html"])
+        check("try: 目的を聞いている段（R1）では使えない", rc == 2 and EN["common.need_project"] in out, out)
+        e.close()
+        e = Env()
+        fake = os.path.join(e.tmp, "fake-browser")
+        open(fake, "w").write(FAKE_BROWSER % sys.executable)
+        os.chmod(fake, 0o755)
+        e.env["CREATECODEBOX_BROWSER"] = fake
+        slug = to_r3(e, "en")
+        rc, out = e.run(["try", "projects/%s/design/ui/index.html" % slug])
+        e.write("projects/%s/src/index.html" % slug, "<html><body>x</body></html>")
+        rc2, out2 = e.run(["try", "projects/%s/src/index.html" % slug])
+        check("try: design/ のページは承認の前でも試せる。src/ のページは作る段から", rc == 0 and "Page: projects/%s/design/ui/index.html (loaded)" % slug in out
+              and rc2 == 1 and EN["try.src_stage"].split("{label}")[0] in out2, (out, out2))
+    finally:
+        e.close()
+    # one run with a real browser, when this computer has one (skipped cleanly when it has none, or when it cannot start here)
+    saved = os.environ.pop("CREATECODEBOX_BROWSER", None)
+    try:
+        found = en.find_browser()
+    finally:
+        if saved is not None:
+            os.environ["CREATECODEBOX_BROWSER"] = saved
+    if not found:
+        print("SKIP no Chromium-family browser on this computer: the real-browser run of ws.sh try is not checked here")
+        return
+    e = Env()
+    try:
+        e.env.pop("CREATECODEBOX_BROWSER", None)
+        slug = build_to_run(e)
+        e.prompt("continue")
+        page = "projects/%s/src/index.html" % slug
+        e.write(page, TRY_PAGE)
+        e.write("projects/%s/src/t/before.js" % slug, "localStorage.setItem('coffee', JSON.stringify(['espresso', 'mocha']));\n")
+        e.write("projects/%s/src/t/after.js" % slug, "document.getElementById('add').click();\nreturn {total: document.getElementById('total').textContent, saved: JSON.parse(localStorage.getItem('coffee')).length};\n")
+        rc, out = e.run(["try", page, "--before", "projects/%s/src/t/before.js" % slug, "--after", "projects/%s/src/t/after.js" % slug, "--size", "420x700"])
+        if EN["try.browser_failed"].split("{name}")[0] in out or (rc == 1 and "did not finish loading" in out):
+            print("SKIP the browser on this computer did not start without a window here: " + out.strip().splitlines()[0][:120])
+            return
+        shot = re.search(r"Screenshot: (projects/\S+\.png)", out)
+        png = open(e.p(shot.group(1)), "rb").read(8) if shot else b""
+        check("try（本物のブラウザ）: --before が先に動き（保存データ 2 件）、--after が押して結果を返す（3 cups・3 件）。画像は PNG",
+              rc == 0 and '"total": "This week: 3 cups"' in out and '"saved": 3' in out and "drawn 2" in out and "drawn 3" in out and png == b"\x89PNG\r\n\x1a\n"
+              and "This week: 3 cups" in out and "No coffee yet" not in out.split("Text on the page")[-1], out)
+        rc, out = e.run(["try", page])
+        check("try（本物のブラウザ）: 何も渡さなければ新しい空のプロファイル（空の状態の文が出る・0 cups）", rc == 0 and "This week: 0 cups" in out and "No coffee yet. Add your first one." in out, out)
+        check("try（本物のブラウザ）: 一時のページを残さない", not [f for f in os.listdir(e.p("projects", slug, "src")) if f.startswith(".ccb-try")])
+    finally:
+        e.close()
+
+
+def test_round2_misc():
+    from lang import en as lang_en, ja as lang_ja, synonyms as syn
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    en = _engine_template
+    # R2-6: after DONE, Claude's own check records can be replaced; the user's stay closed
+    e = Env()
+    try:
+        slug = to_done(e)
+        shot = e.p("projects", slug, "knowledge", "s1.png")
+        open(shot, "wb").write(b"\x89PNG\r\n\x1a\n" + b"1" * 400)
+        rc, out = e.run(["st", "mark", "T-IO-01-F1", "pass", "--by", "ai", "--shot", shot, "--evidence", "a broken file shows the message"])
+        first = open(e.p("projects", slug, "design", "evidence", "T-IO-01-F1.png"), "rb").read() if rc == 0 else b""
+        check("DONE のあと: Claude が確かめるケースは、合格を記録できる（段は DONE のまま）", rc == 0 and e.stage() == "DONE" and "recorded: T-IO-01-F1" in out, out)
+        shot2 = e.p("projects", slug, "knowledge", "s2.png")
+        open(shot2, "wb").write(b"\x89PNG\r\n\x1a\n" + b"2" * 500)
+        rc, out = e.run(["st", "mark", "T-IO-01-F1", "pass", "--by", "ai", "--shot", shot2, "--evidence", "after the fix: a broken file shows the new message"])
+        row = [r for r in e.rec("st_%s.json" % slug)["rows"] if r["id"] == "T-IO-01-F1"][0]
+        check("DONE のあと: 直したあとの新しい画像で、同じケースを記録し直せる（証拠の画像と文が置き換わる）",
+              rc == 0 and open(e.p("projects", slug, "design", "evidence", "T-IO-01-F1.png"), "rb").read() not in (b"", first) and "after the fix" in row["evidence"], out)
+        rc, out = e.run(["st", "run", "T-IO-01-F1"])
+        check("DONE のあと: st run も Claude のケースには使える（ここでは runner が無いので、その理由で断る。完了済みだから、ではない）", rc == 2 and "no test runner" in out, out)
+        e.prompt("T-IO-01-N1 failed after all")
+        rc1, out1 = e.run(["st", "mark", "T-IO-01-N1", "fail", "--by", "user", "--evidence", "it broke"])
+        rc2, out2 = e.run(["st", "mark", "T-IO-01-N1", "pass", "--by", "ai", "--shot", shot2, "--evidence", "a long enough text"])
+        rc3, out3 = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
+        rc4, out4 = e.run(["st", "mark", "T-IO-02-F1", "todo", "--by", "ai"])
+        check("DONE のあと: 利用者の確認は閉じたまま（利用者のケース・番号での記録・todo に戻すことは断る。理由に、Claude の分は確かめ直せると出る）",
+              (rc1, rc2, rc3, rc4) == (2, 2, 2, 2) and all(EN["st.done_only_ai"] in o for o in (out1, out2, out3, out4)) and e.stage() == "DONE", (out1, out2, out3, out4))
+    finally:
+        e.close()
+    # N1: write_text leaves no temp file behind when the move fails
+    td = tempfile.mkdtemp(prefix="ccb_wt_")
+    try:
+        os.mkdir(os.path.join(td, "page.html"))
+        try:
+            en.write_text(os.path.join(td, "page.html"), "x")
+            raised = False
+        except OSError:
+            raised = True
+        check("write_text: 置き換えに失敗しても、一時のファイル（.tmp<pid>）を残さない", raised and sorted(os.listdir(td)) == ["page.html"], os.listdir(td))
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+    e = Env()
+    try:
+        guide_fixture(e)
+        slug = build_to_run(e)
+        e.prompt("continue")
+        for name in ("guide.html", "guide.data.js"):
+            if os.path.isfile(e.p("projects", name)):
+                os.remove(e.p("projects", name))
+            os.mkdir(e.p("projects", name))
+        out = e.hook("prompt", {"prompt": "continue"})
+        check("ガイド: 2つのファイルの場所にフォルダがあっても hook は壊れず、一時のファイルも残らない",
+              "[CreateCodeBox" in json.loads(out)["hookSpecificOutput"]["additionalContext"] and not [f for f in os.listdir(e.p("projects")) if ".tmp" in f], os.listdir(e.p("projects")))
+    finally:
+        e.close()
+    # S9: the words of a person who is lost
+    pos = ["help me", "I need help", "please help me", "what do I do next?", "what's next?", "whats next", "now what?", "I am stuck", "i'm confused", "im lost",
+           "I dont know what to do", "what am I supposed to do?", "not sure what to do", "what should I do next?",
+           "次は何をすればいいですか", "助けてください", "わからない", "分からない", "わかりません", "困っています", "迷っています", "どうすればいいの", "次は何をしたらいいですか",
+           "わからなくなりました", "困りました", "どうしよう", "何すればいい", "次どうすればいい"]
+    neg = ["help me add a login page", "I lost my data", "次は検索を足したい", "ヘルプページを作って", "add a help button", "the help page is broken", "lost and found app",
+           "困った時のページを足して", "次はログイン", "わかりましたか", "I need help with the colours of the page please"]
+    check("迷った: 迷った人が打つ言い方を拾う（help me・what's next?・助けてください・わかりません・困っています …）", all(en.is_lost(x) for x in pos), [x for x in pos if not en.is_lost(x)])
+    check("迷った: 依頼の文は拾わない（help me add a login page・I lost my data・次は検索を足したい・ヘルプページを作って）", not any(en.is_lost(x) for x in neg), [x for x in neg if en.is_lost(x)])
+    # R2-5: the goal in the user's own words
+    goal = {"self": ["自分だけ", "自分用です", "自分だけで使う", "自分用", "just for me", "only me"], "share": ["家族に見せる", "友だちに見せる", "友達に見せる", "人に見せる", "show to others", "friends only"],
+            "unknown": ["まだ分からない", "まだ決めていない", "わからない", "not sure yet"], "public-free": ["公開して無料", "public, free"], "public-paid": ["公開して有料", "public, paid"]}
+    bad = [(k, w, syn.goal_symbol(w)) for k, ws in goal.items() for w in ws if syn.goal_symbol(w) != k]
+    check("目的の選択肢: 利用者の言い方（自分だけ・自分用です・家族に見せる・友だちに見せる …）が記号に読める", not bad, bad)
+    check("目的の選択肢: R1 の規則は、選択肢をバッククォートなしの利用者の言語で見せ、どんな言い方でも受ける（en・ja）",
+          "`just for me`" not in EN["rule.R1"] and "just for me / show to others / not sure yet" in EN["rule.R1"] and "without backticks" in EN["rule.R1"]
+          and "`just for me`" not in JA["rule.R1"] and "自分用／人に見せる／まだ分からない" in JA["rule.R1"] and "バッククォートを付けずに" in JA["rule.R1"])
+    pm = open(os.path.join(TEMPLATE, ".claude", "agents", "pm.md"), encoding="utf-8").read()
+    ask = open(os.path.join(TEMPLATE, ".claude", "skills", "ws-ask", "SKILL.md"), encoding="utf-8").read()
+    check("目的の選択肢: pm.md と ws-ask も同じ（バッククォートなし・自分用 / 人に見せる / まだ分からない）",
+          all("`just for me`" not in t and "just for me / show to others / not sure yet" in t and "自分用 / 人に見せる / まだ分からない" in t for t in (pm, ask)))
+    # R2-10: the design the user agrees to is the finished look
+    css = open(os.path.join(TEMPLATE, "ws", "templates", "look.css"), encoding="utf-8").read()
+    md = open(os.path.join(TEMPLATE, "ws", "templates", "look.md"), encoding="utf-8").read()
+    check("見た目の部品: ws/templates/look.css と look.md があり、外から何も読み込まない（@import・http・url() の外部なし）・CJK の字を含まない",
+          "@import" not in css and "http://" not in css and "https://" not in css and not re.search(r"url\(\s*['\"]?(?!data:)", css) and "https://" not in md.replace("https://example", "")
+          and not CJK_ALL.search(css) and not CJK_ALL.search(md))
+    need = ["--accent", "--ink", "--muted", "--surface", "--line", "--good", "--warn", "--bad", ".btn", ".btn.primary", ".btn.quiet", ".btn.danger", ".card", ".row", ".field", ".tile",
+            ".note.good", ".note.warn", ".note.bad", ".empty", "prefers-color-scheme: dark", "prefers-reduced-motion", "Hiragino Sans", "min-height", ":focus-visible"]
+    check("見た目の部品: 決めた変数・クラス・暗い配色・動きを減らす設定・CJK のフォント・大きなボタンが入っている", not [n for n in need if n not in css], [n for n in need if n not in css])
+    check("見た目の部品: look.md は、ページの <style> に写して使うこと・アクセントの色は1つ・最初の絵には使わないことを書いている",
+          "<style>" in md and "--accent" in md and "sketch.html" in md and "design/ui/index.html" in md)
+    grey_page = "<html><head><style>body{color:#333;background:#f4f4f4} .box{border:1px solid #aaa;color:rgb(90,90,90)} a{color:hsl(0,0%,40%)}</style></head><body>x</body></html>"
+    e = Env()
+    try:
+        slug = to_r3(e, "en")
+        e.write("projects/%s/design/ui/index.html" % slug, grey_page)
+        c = e.pctx("show me")
+        check("設計の色: R3 で設計のページに色が無いと、文脈に1行の注意（止めない・段は R3 のまま）", EN["note.grey_design"] in c and e.stage() == "R3", c[-300:])
+        for name, page_html in (("--accent がある", grey_page.replace("body{", ":root{--accent:#2f6fed} body{")), ("灰色でない色がある", grey_page.replace("#aaa", "#2f6fed")),
+                                ("rgb の色がある", grey_page.replace("rgb(90,90,90)", "rgb(20, 120, 90)")), ("hsl の色がある", grey_page.replace("hsl(0,0%,40%)", "hsl(210, 80%, 45%)")),
+                                ("色の名前がある", grey_page.replace("#333", "teal"))):
+            e.write("projects/%s/design/ui/index.html" % slug, page_html)
+            check("設計の色: %sページには注意を出さない" % name, EN["note.grey_design"] not in e.pctx("show me"))
+        e.write("projects/%s/design/ui/index.html" % slug, grey_page)
+        e.write("projects/%s/design/ui/brief.md" % slug, "## Purpose\nBook\n## Layout\nTop date\n## Colors\nmonochrome: black, white and one grey\n## Text\nlarge\n## States\nempty hint\n")
+        check("設計の色: brief.md の Colors が白黒の指定（monochrome・白黒・モノクロ）なら注意を出さない", EN["note.grey_design"] not in e.pctx("show me"))
+        e.env["CREATECODEBOX_LANG"] = "ja"
+        e.write("projects/%s/design/ui/brief.md" % slug, "## Purpose\nBook\n## Layout\nTop date\n## Colors\ngrey and white\n## Text\nlarge\n## States\nempty hint\n")
+        check("設計の色（ja）: 注意は日本語の表の文", JA["note.grey_design"] in e.pctx("見せて"))
+        e.env.pop("CREATECODEBOX_LANG")
+        e.pctx("looks good")
+        check("設計の色: R3 を出たあとは注意を出さない", e.stage() == "R4" and EN["note.grey_design"] not in e.pctx("go on"))
+    finally:
+        e.close()
+    design = open(os.path.join(TEMPLATE, ".claude", "skills", "ws-design", "SKILL.md"), encoding="utf-8").read()
+    files = {"designer.md": open(os.path.join(TEMPLATE, ".claude", "agents", "designer.md"), encoding="utf-8").read(),
+             "builder.md": open(os.path.join(TEMPLATE, ".claude", "agents", "builder.md"), encoding="utf-8").read(),
+             "reviewer.md": open(os.path.join(TEMPLATE, ".claude", "agents", "reviewer.md"), encoding="utf-8").read()}
+    check("設計の見た目: 規則（R2・R3）とスキル・エージェントが、設計は色のついた完成の見た目だと言っている（最初の絵は粗いまま・look.css から始める・作る人は見た目を保つ・レビューは色を消させない）",
+          "ws/templates/look.css" in EN["rule.R2"] and "ws/templates/look.css" in JA["rule.R2"] and "This is how your app will look." in EN["rule.R3"]
+          and "これが、あなたのアプリの見た目です。" in JA["rule.R3"] and "rough on purpose" in EN["rule.R1"]
+          and "ws/templates/look.css" in design and "This is how your app will look." in design and "ws/templates/look.css" in files["designer.md"]
+          and "Keep the approved look exactly" in files["builder.md"] and "Never ask to remove colour" in files["reviewer.md"])
+    # R2-4: every example sentence that the engine, the rules or the skills show is itself accepted
+    build = open(os.path.join(TEMPLATE, ".claude", "skills", "ws-build", "SKILL.md"), encoding="utf-8").read()
+    examples = [("1, 2 and 4 worked", EN["next.run.check"], {1, 2, 4}, set()), ("1と2と4はできた", JA["next.run.check"], {1, 2, 4}, set()),
+                ("1, 2 and 4 worked; 3 did not", EN["rule.RUN"], {1, 2, 4}, {3}), ("1と2と4はできた。3はだめ", JA["rule.RUN"], {1, 2, 4}, {3}),
+                ("1, 2 and 4 worked; 3 did not", EN["st.numbered.unclear"], {1, 2, 4}, {3}), ("1と2と4はできた。3はだめ", JA["st.numbered.unclear"], {1, 2, 4}, {3}),
+                ("1, 2 and 4 worked; 3 did not", pm, {1, 2, 4}, {3}), ("1, 2 and 4 worked; 3 did not", build, {1, 2, 4}, {3}),
+                ("1, 2 pass", build, {1, 2}, set()), ("1-3 pass", build, {1, 2, 3}, set()), ("1 to 7 are fine", build, set(range(1, 8)), set()),
+                ("1から7まで全部できた", build, set(range(1, 8)), set())]
+    bad = [(t, en.read_answer(t)) for t, where, p, f in examples if t not in where or (en.read_answer(t)["passed"], en.read_answer(t)["failed"]) != (p, f)]
+    check("確認の答え: エンジン・規則・スキルが見せる例の文（%d個）は、どれもそのまま受け付けられる" % len(examples), not bad, bad[:3])
+    check("確認の答え: `all pass` の例（ws-build）は、まとめての合格として読める", "`all pass`" in build and en.read_answer("all pass")["bulk"])
+    for msg, want in (("1と2と4はできた", [1, 2, 4]), ("1から7まで全部できました。", [1, 2, 3, 4, 5, 6, 7]), ("1, 2 and 4 worked; 3 did not", [1, 2, 4]), ("全部できた", list(range(1, 9)))):
+        e = Env()
+        try:
+            rows = [dict(IO_EN["rows"][0], id="IO-%02d" % i, name="input %d" % i) for i in range(1, 8)] + [dict(IO_EN["rows"][1], id="IO-08")]
+            slug = build_to_run(e, io={"rows": rows})
+            e.prompt("continue")
+            e.run(["st", "list", "--numbered"])
+            e.prompt(msg)
+            rc, out = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
+            mp = e.rec("session.json")["numbered"]
+            st = {r["id"]: r["status"] for r in e.rec("st_%s.json" % slug)["rows"]}
+            got = sorted(int(k) for k, v in mp.items() if st[v] == "pass")
+            check("確認の答え（本物の流れ）: 「%s」は %s を合格にする（8件の一覧）" % (msg, want), rc == 0 and got == want, (got, out))
+        finally:
+            e.close()
+    # R2-7 / R2-9 / R2-1 / R2-2 / R2-3: what the rules and the skills say
+    rev = files["reviewer.md"]
+    check("規則: 完了と出たら完了と伝える・短く伝える・レビューは利用者の確認の前に1回・try・finish の言葉（rule.RUN・rule.DONE・pm.md・ws-build・builder.md・reviewer.md）",
+          all(x in EN["rule.RUN"] for x in ("ws.sh try", "`finish`", "before you show the user's checks", "about eight short lines"))
+          and all(x in JA["rule.RUN"] for x in ("ws.sh try", "「完成にする」", "利用者の確認項目を見せる前", "8行ほど"))
+          and all(x in EN["rule.DONE"] for x in ("say done", "at most six short lines", "task add", "what is left?")) and "完了と出ていれば、完了と伝えます" in JA["rule.DONE"]
+          and all(x in pm for x in ("ws.sh try", "`finish`", "`continue`", "you say done", "at most six short lines", "about eight short lines", "before you show the user their checks"))
+          and all(x in build for x in ("ws.sh try", "`finish`", "you say done", "about eight short lines", "before you show the user their checks"))
+          and "ws.sh try" in files["builder.md"] and "Breaks what the user asked for" in rev and "To improve" in rev)
+    agents = open(os.path.join(TEMPLATE, "AGENTS.md"), encoding="utf-8").read()
+    check("AGENTS.md（Codex 用）にも同じ規則が入っている（try・finish・完了と伝える）・32 KiB 未満", "ws.sh try" in agents and "`finish`" in agents and "you say done" in agents
+          and len(agents.encode("utf-8")) < 32 * 1024, len(agents.encode("utf-8")))
+
+
+def test_lang_050():
+    from lang import en as lang_en, ja as lang_ja
+    EN, JA = lang_en.MESSAGES, lang_ja.MESSAGES
+    check("翻訳: en と ja の鍵の集合が同じ", set(EN) == set(JA), (sorted(set(EN) - set(JA))[:5], sorted(set(JA) - set(EN))[:5]))
+    new = [k for k in EN if k.startswith(("next.", "where.", "html.guide.", "note.lost", "note.goal", "note.guide", "goal.", "guide.", "zone.guide", "try.", "stop.next", "stop.wait", "word.c", "word.f"))
+           or k in ("rule.next", "note.go_on", "note.grey_design", "note.recorded.accept", "note.accept_needs", "stage.accepted", "deny.guide_file", "st.numbered.unclear",
+                    "st.numbered.failed", "st.list.claude", "st.done_only_ai", "rule.R0.empty", "rule.R1", "rule.R2", "rule.R3", "rule.RUN", "rule.DONE", "stage.done")]
+    ph = lambda s: set(re.findall(r"\{([A-Za-z_]+)\}", s))
+    bad = [k for k in new if ph(EN[k]) != ph(JA[k])]
+    check("翻訳: 0.5.0 で足した鍵（%d個）は、穴の名前が en と ja で同じ" % len(new), len(new) >= 95 and not bad, bad)
+    gap = re.compile("[\u3040-\u30ff\u3400-\u9fff][ \t]+[A-Za-z0-9`]|[A-Za-z0-9`][ \t]+[\u3040-\u30ff\u3400-\u9fff]")
+    bad = [(k, gap.search(JA[k]).group(0)) for k in new if gap.search(JA[k])]
+    check("翻訳: 0.5.0 で足した日本語の文は、日本語と英数字の間に半角の空白を入れない", not bad, bad[:5])
+    words = re.compile(r"\b(beginner|easy|easily|official|trial|preview)\b", re.I)
+    bad = [k for k in new if words.search(EN[k])]
+    check("翻訳: 0.5.0 で足した英語の文に、使わない語が無い", not bad, bad)
+    check("翻訳: ▶の規則と Stop の文に▶の字が入っている（en・ja）", all("▶" in t[k] for t in (EN, JA) for k in ("rule.next", "stop.next", "note.lost")))
+    check("翻訳: 空のワークスペースの規則に、new の直後に ws.sh guide を実行する指示がある（en・ja）", "ws.sh guide`" in EN["rule.R0.empty"] and "ws.sh guide`" in JA["rule.R0.empty"])
+    for name in ("README.md", "README.ja.md"):
+        t = open(os.path.join(TEMPLATE, name), encoding="utf-8").read()
+        check("%s: ガイドのページ・▶の行・迷ったときの言葉の説明がある" % name, "projects/guide.html" in t and "▶" in t and ("`help`" in t if name == "README.md" else "迷った" in t), name)
+
+
 def main():
     e = Env()
     try:
@@ -2547,9 +3859,12 @@ def main():
                                  {"id": "IO-03", "kind": "api", "name": "c", "dir": "in", "example": "z", "failure": "h"},
                                  {"id": "IO-04", "kind": "file", "name": "d", "dir": "in", "example": "w", "failure": "i"}])
         who = {r["id"]: r["who"] for r in gen2}
-        check("F3: who の初期値（scheduled は全て・external と api の失敗は ai・他は user）",
+        check("F3: who の初期値（利用者は正常系だけ・失敗系と空は全て ai・scheduled は全て ai）",
               who == {"T-IO-01-N1": "ai", "T-IO-01-F1": "ai", "T-IO-02-N1": "user", "T-IO-02-F1": "ai", "T-IO-03-N1": "user", "T-IO-03-F1": "ai",
-                      "T-IO-04-N1": "user", "T-IO-04-F1": "user"}, who)
+                      "T-IO-04-N1": "user", "T-IO-04-F1": "ai"}, who)
+        check("F3: 画面の行は、正常系（N）だけが利用者・空（B）と失敗（F）は ai", {r["id"]: r["who"] for r in gen} ==
+              {"T-IO-01-N1": "user", "T-IO-01-B1": "ai", "T-IO-01-F1": "ai", "T-IO-02-N1": "user", "T-IO-02-F1": "ai",
+               "T-IO-03-N1": "user", "T-IO-03-B1": "ai", "T-IO-03-F1": "ai"}, {r["id"]: r["who"] for r in gen})
         check("st mark: 入力に ID が無いと合格にできない（--quote だけでは足りない）", e.run(["st", "mark", "T-IO-01-N1", "pass", "--by", "user"])[0] == 1)
         e.prompt("動かしてみました。820 円と出ました。")
         check("st mark: ID を言わない入力では合格にできない", e.run(["st", "mark", "T-IO-01-N1", "pass", "--by", "user", "--quote", "820 円と出ました"])[0] == 1)
@@ -2586,12 +3901,13 @@ def main():
         rc, out = e.run(["mark", "S-04", "done"])
         check("mark: 利用者が確かめるケースが残る間は、最後の行を済にできない", rc == 1 and "システムテスト" in out, out)
         rc, out = e.run(["st", "list", "--numbered"])
-        check("st list --numbered: 番号つきで出る（1. T-IO-01-N1 …）", rc == 0 and out.startswith("1. T-IO-01-N1") and "4. T-IO-02-F1" in out, out)
-        e.prompt("3, 4 pass")
+        check("st list --numbered: 利用者が確かめるケースだけが、1 から番号つきで出る（1. T-IO-01-N1・2. T-IO-02-N1）", rc == 0 and out.startswith("1. T-IO-01-N1")
+              and "2. T-IO-02-N1" in out and "T-IO-02-F1" not in out and "T-IO-01-F1" not in out, out)
+        e.prompt("1, 2 pass")
         rc, out = e.run(["st", "mark", "numbered", "pass", "--by", "user"])
         rows_now = e.rec("st_%s.json" % slug)["rows"]
-        check("番号で答えると、複数まとめて記録される（recorded: に両方・via: numbered）", rc == 0 and "記録しました: T-IO-02-N1, T-IO-02-F1" in out
-              and rows_now[2].get("via") == "numbered" and rows_now[3].get("via") == "numbered", out)
+        check("番号で答えると、複数まとめて記録される（recorded: に両方・via: numbered）", rc == 0 and "記録しました: T-IO-01-N1, T-IO-02-N1" in out
+              and rows_now[0].get("via") == "numbered" and rows_now[2].get("via") == "numbered", out)
         rc, out = e.run(["mark", "S-04", "done", "--evidence", "一覧の全ケースが実際に出た"])
         check("mark: 利用者のケースと正常系が合格すれば、最後の行を済にできる", rc == 0, out)
         check("予定表・システムテストの記録は、AI が直接書き換えられない（.ws/ と、旧い design/ の場所）", e.pre("Write", file_path=stp, content="{}") is not None
@@ -2889,7 +4205,9 @@ def main():
     for fn in (test_scan, test_gate_keys_and_protect, test_records_signature, test_st_extra, test_done_and_append, test_hooks_g1, test_lang,
                test_approval_phrases, test_two_step_approval, test_start_check, test_publish_phrase, test_c3_parse, test_v02_fixture, test_stage_misc, test_stop, test_safety_commands,
                test_new_entrance_and_render, test_harden_lists, test_references, test_place, test_read_only_options, test_update_check, test_update_codex_hooks_note, test_compound_and_project_write, test_session_resume, test_translation,
-               test_tasks_triage, test_tasks_commands, test_schedule_dates, test_gantt_text, test_open_block_on_choice, test_tasks_digest_and_page, test_tasks_lang, test_commit_email_privacy):
+               test_tasks_triage, test_tasks_commands, test_schedule_dates, test_gantt_text, test_open_block_on_choice, test_tasks_digest_and_page, test_tasks_lang, test_commit_email_privacy,
+               test_next_step, test_next_context_and_stop, test_lost, test_guide_page, test_goal_question, test_checks_a_person_can_do,
+               test_accept_finish, test_try, test_round2_misc, test_lang_050):
         try:
             fn()
         except Exception as ex:  # a test that crashes counts as a failure, and the rest still run

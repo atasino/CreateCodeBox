@@ -1,4 +1,4 @@
-<!-- card: systemtest v3 -->
+<!-- card: systemtest v4 -->
 # Learn card: What "done" means
 
 ## In one line
@@ -12,13 +12,13 @@ A parcel. It is not delivered because the label says so. It is delivered when yo
 - A case id looks like `T-IO-01-N1`. N is a normal case. B is an empty or edge case. F is a failure case.
 - Many of the cases are for empty and failure situations. You decide what you see when something goes wrong, before building.
 - See the list with `bash ws/bin/ws.sh st list --numbered`. You can answer by number.
-- You use the thing yourself, and tell Claude what you saw. Then the case is recorded as passed.
-- Some cases you cannot start by hand, such as a monthly job. Claude checks those, and tells you which ones.
-- The first version is done when every normal case and every case you can run have passed.
+- You check what you asked for, once each: the normal cases. You use the thing yourself, and tell Claude what you saw. Then the case is recorded as passed.
+- Claude checks the empty and failure cases, and the cases you cannot start by hand, such as a monthly job. The list shows which of those are not checked yet.
+- The first version is done when every case that you check and every normal case have passed.
 
 ## Watch out
 - A test mark that says "pass" is not enough. You, or Claude, must really see the result you asked for.
-- Do not check only the main cases. Check all of them.
+- The empty and failure cases still count. Claude checks them, and tells you how many are not checked yet.
 - If you cannot decide if a case passed, do not add more checks. Make the sentence about what you should see clearer.
 
 ## The technical name

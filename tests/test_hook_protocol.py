@@ -190,11 +190,31 @@ def test_stop_shape():
         e.run(["new", "b", "--name", "B", "--quote", "another"])
         e.hook("sessionstart", {"source": "startup"})
         e.prompt("hi")
-        rc, out = ev(e, "stop", {"last_assistant_message": "Sure, I can help with many things."})
+        rc, out = ev(e, "stop", {"last_assistant_message": "Sure, I can help with many things.\n\u25b6 Tell me what you want to make."})
         o = one_json(out)
         check("protocol: stop block = exit 0, one JSON line, exactly {decision: 'block', reason: <the stop.ask text>}",
               rc == 0 and isinstance(o, dict) and set(o) == {"decision", "reason"} and o["decision"] == "block" and o["reason"] == T_en("stop.ask"),
               (rc, out[:200]))
+        # 0.5.0: a reply with no next-step line (a line that starts with the mark) is blocked once for each user message
+        next_r0 = T_en("stop.next", next=T_en("next.r0"))
+        rc, out = ev(e, "stop", {"last_assistant_message": "Do you want to continue the project or start a new one?"})
+        o = one_json(out)
+        check("protocol: stop block for a missing next-step line = exit 0, one JSON line, exactly {decision: 'block', reason: <the stop.next text>}",
+              rc == 0 and isinstance(o, dict) and set(o) == {"decision", "reason"} and o["decision"] == "block" and o["reason"] == next_r0
+              and "\u25b6" in o["reason"] and out.decode("utf-8").count("\u25b6") >= 1, (rc, out[:300]))
+        rc, out = ev(e, "stop", {"last_assistant_message": "Do you want to continue the project or start a new one?"})
+        check("protocol: the second stop for the same user message = exit 0 and no output", rc == 0 and out == b"", (rc, out[:120]))
+        e.prompt("hi again")
+        rc, out = ev(e, "stop", {"last_assistant_message": "Sure, I can help with many things."})
+        o = one_json(out)
+        check("protocol: two reasons at once = still one JSON line with one reason: the two texts joined by a newline (stop.ask first)",
+              rc == 0 and isinstance(o, dict) and set(o) == {"decision", "reason"} and o["reason"] == T_en("stop.ask") + "\n" + next_r0, (rc, out[:300]))
+        e.prompt("hi once more")
+        rc, out = ev(e, "stop", {"last_assistant_message": "Continue, or start a new one?\n\u25b6 Say continue or new."})
+        check("protocol: a reply that ends with the next-step line = exit 0 and no output", rc == 0 and out == b"", (rc, out[:120]))
+        e.prompt("hi once more")
+        rc, out = ev(e, "stop", {})
+        check("protocol: stop with no readable reply = exit 0 and no output", rc == 0 and out == b"", (rc, out[:120]))
         rc, out = run_patched(e, "stop", "def boom(*a, **k): raise RuntimeError('x')\nengine.on_stop = boom",
                               json.dumps({"last_assistant_message": "Sure."}).encode())
         check("protocol: an exception in on_stop = exit 0 and no output", rc == 0 and out == b"", (rc, out[:120]))

@@ -1,6 +1,6 @@
 #!/bin/sh
 # CreateCodeBox commands (Mac, Linux, Git Bash on Windows). The work is in ws/engine.py.
-# usage: bash ws/bin/ws.sh status | list | select | new | lint | render | open | lang | schedule-init | mark | st ... | task add|set|date|none | tasks [gantt] | doctor | version | update
+# usage: bash ws/bin/ws.sh status | next | where | guide | try | list | select | new | lint | render | open | lang | schedule-init | mark | st ... | task add|set|date|none | tasks [gantt] | doctor | version | update
 HERE="$(cd "$(dirname "$0")" && pwd)"
 export CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$HERE/../.." && pwd)}"
 PYTHONUTF8=1

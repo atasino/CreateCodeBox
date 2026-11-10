@@ -8,11 +8,14 @@ VIZ = ["gakaso", "artifact", "local"]
 BRIEF_SECTIONS = ["purpose", "layout", "color", "text", "state"]
 
 _GOAL = {
-    "self": ["self", "just for me", "for me", "for myself", "only me", "自分用", "自分で使うだけ", "自分で使う"],
-    "share": ["share", "show to others", "show others", "friends only", "friends-only", "for friends", "見せる", "身近な人に見せる", "人に見せる"],
+    "self": ["self", "just for me", "for me", "for myself", "only me", "only for me", "自分用", "自分で使うだけ", "自分で使う", "自分だけ", "自分用です", "自分だけで使う",
+             "自分だけが使う", "自分のため", "自分だけです"],
+    "share": ["share", "show to others", "show others", "friends only", "friends-only", "for friends", "friends and family", "family", "見せる", "身近な人に見せる", "人に見せる",
+              "身近な人だけ", "家族に見せる", "友だちに見せる", "友達に見せる", "家族や友だちに見せる", "家族や友達に見せる", "人に見せます"],
     "public-free": ["public-free", "public free", "public, free", "public and free", "free public", "公開無料", "公開して無料", "公開(無料)"],
     "public-paid": ["public-paid", "public paid", "public, paid", "public and paid", "paid public", "公開有料", "公開して有料", "公開(有料)"],
-    "unknown": ["unknown", "not sure", "not sure yet", "undecided", "tbd", "未定", "まだ分からない", "まだわからない", "分からない"],
+    "unknown": ["unknown", "not sure", "not sure yet", "undecided", "tbd", "未定", "まだ分からない", "まだわからない", "分からない", "わからない", "まだ決めていない",
+                "まだ決めてない", "決めていない"],
 }
 _KIND = {
     "screen": ["screen", "ui", "page", "画面"],
@@ -97,3 +100,28 @@ def viz_symbol(v):
         if cand in VIZ:
             return cand
     return None
+
+
+# ---- "I am lost" (0.5.0). A short message that is exactly one of these gets the recap of where the user is. ----
+# The engine compares after lower-casing and removing apostrophes (i'm -> im), filler words around the phrase, and polite
+# Japanese endings (ですか, ください, ています, ました). A longer sentence that only contains one of these is not a lost message.
+LOST_EN = {
+    "help", "help me", "i need help", "need help", "im lost", "i am lost", "lost", "stuck", "im stuck", "i am stuck", "what now", "now what",
+    "what next", "whats next", "what is next", "what do i do", "what should i do", "what do i do now", "what do i do next", "what should i do next",
+    "what should i do now", "what am i supposed to do", "where am i", "i dont know what to do", "i do not know what to do", "not sure what to do",
+    "confused", "im confused", "i am confused",
+}
+LOST_JA = {
+    "迷った", "迷いました", "迷っ", "迷って", "迷子", "ヘルプ", "助けて", "どうすれば", "どうすればいい", "どうしたらいい", "どうしよう", "次は", "次は何", "次は何をすれば",
+    "次は何をすればいい", "次は何をしたらいい", "次に何をすればいい", "次どうする", "次どうすればいい", "何をすれば", "何をすればいい", "何すればいい", "今どこ", "いまどこ",
+    "わからない", "分からない", "わかりません", "分かりません", "わからなくなった", "分からなくなった", "わからなくなり", "分からなくなり", "困った", "困っ", "困って", "困り",
+}
+# ---- the answers to the goal question at the end (short, exact lists) ----
+# yes: narrow on purpose. "yes please", "y" or 「お願いします」 answer some other question, so they are not here.
+GOAL_YES_EN = {"yes", "yes it does", "yes, it does", "it does"}
+GOAL_YES_JA = {"はい", "できた", "できました", "届いた", "届きました", "そうです", "はい、そうです", "はいそうです", "はい、できました", "はいできました"}
+GOAL_NO_EN = {"no", "not yet", "no, not yet", "no not yet", "not yet, no"}
+GOAL_NO_JA = {"まだ", "まだです", "いいえ", "いいえ、まだです", "いいえまだです"}
+# "not yet" alone (no bare "no"): the words that take back an earlier yes without a question before them
+GOAL_NOT_YET_EN = {"not yet", "no, not yet", "no not yet", "not yet, no"}
+GOAL_NOT_YET_JA = {"まだ", "まだです", "いいえ、まだです", "いいえまだです"}

@@ -12,7 +12,7 @@ You are the design agent. Put your work in `projects/<name>/design/`. The minimu
 ## The look (from R3, only if the thing has a screen)
 
 1. **Write the brief first.** Before you write any HTML, and before you send anything to Gakaso, write your design thinking in `design/ui/brief.md`. Use these headings: `## Purpose`, `## Layout`, `## Colors` (3 colors at most), `## Text` (sizes), `## States` (empty screen and error screen). Say why each choice suits this user and this goal. Never draw without the brief.
-2. Make `design/ui/index.html`: one file, no outside loads, works when opened by double-click. It must look clean and be easy to read.
+2. Make `design/ui/index.html`: one file, no outside loads, works when opened by double-click. **It is the finished look, not a wireframe.** The rough first picture is grey on purpose; the design is not. Start from `ws/templates/look.css`: copy the whole block inline into the page's `<style>` (read `ws/templates/look.md`). Choose ONE accent colour that suits the purpose, and say why in `brief.md` under `## Colors` (the accent, the neutrals, one status colour). Use large readable text, big buttons, a kind empty state, a clear error notice, and real-looking example data from the user's words. With a reference, keep its layout and flow, and never copy its colours, logo, text or pictures.
 3. Show it locally. Gakaso is used only when the user chose it. Then follow `ws-design`: put the look from the brief into Gakaso, and write the page address in `design/ui/gakaso.txt`.
 
 ## The table of inputs and outputs (R4)
