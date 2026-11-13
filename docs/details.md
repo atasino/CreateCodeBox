@@ -82,7 +82,7 @@ Default: the model you choose in Claude Code. The helper agents `connector` and 
 
 ## What we have checked
 
-The unit tests are in `tests/`. In version 0.5.0, `test_engine.py` has 1020 checks, `test_hook_protocol.py` has 46, and `test_codex.py` has 164. All of them pass on a Mac with Python 3.9. GitHub Actions runs them on Linux with Python 3.8 and 3.12. We have not run the workspace in a real, interactive Claude Code session with a person. The real runs below are `-p` runs.
+The unit tests are in `tests/`. In version 0.5.1, `test_engine.py` has 1053 checks, `test_hook_protocol.py` has 46, and `test_codex.py` has 164. All of them pass on a Mac with Python 3.9. GitHub Actions runs them on Linux with Python 3.8 and 3.12. We have not run the workspace in a real, interactive Claude Code session with a person. The real runs below are `-p` runs.
 
 ### Real runs on version 0.5.0
 

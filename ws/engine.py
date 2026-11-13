@@ -317,6 +317,15 @@ def filled(v):
     return v.lower() not in _PH_LOWER and len(v) >= 2 and not re.match(r"^[(（]", v)
 
 
+def bracket_start(v):
+    """A value that is there but counts as not filled in only because it starts with ( or （ (not one of the placeholder words)."""
+    v = (v or "").strip()
+    if not re.match(r"^[(（]", v) or v.lower() in _PH_LOWER or len(v) < 2:
+        return False
+    inner = re.sub(r"^[(（]\s*|\s*[)）]\s*$", "", v).strip()
+    return bool(inner) and inner.lower() not in _PH_LOWER  # "(TBD)" and "()" are the user writing nothing: no reason line for them
+
+
 def sha(paths):
     h = hashlib.sha256()
     for p in paths:
@@ -347,9 +356,13 @@ def ws_key(create=True):
         try:
             with open(path, "rb") as f:
                 k = f.read()
-            return k if len(k) == 32 else None
         except OSError:
             return None
+        if len(k) > 32:
+            # A key written before 0.5.1 on Windows was made in text mode: every 0x0A was written as 0x0D 0x0A. Only an 0x0A gets a 0x0D put
+            # before it, so taking those back is exact. Nothing was ever signed with the longer file (it was unreadable), so this is the key.
+            k = k.replace(b"\r\n", b"\n")
+        return k if len(k) == 32 else None
     k = read()
     if k or os.path.exists(path):
         return k
@@ -357,7 +370,7 @@ def ws_key(create=True):
         return None
     try:
         os.makedirs(key_dir(), mode=0o700, exist_ok=True)
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)  # O_BINARY: Windows text mode would turn 0x0A into 0x0D 0x0A
         try:
             os.write(fd, os.urandom(32))
         finally:
@@ -714,6 +727,8 @@ def _compute(root, slug=None):
         miss.append(T("todo.r1.goal"))
     if not filled(p.get("what")):
         miss.append(T("todo.r1.what"))
+        if bracket_start(p.get("what")):
+            miss.append(T("todo.bracket", field="what"))
     if miss:
         return dict(base, stage="R1", todo=miss + [T("todo.format")])
     if new_entrance(root, slug):
@@ -727,6 +742,8 @@ def _compute(root, slug=None):
                 miss.append(T(label))
         elif not filled(p.get(k)):
             miss.append(T(label))
+            if bracket_start(p.get(k)):
+                miss.append(T("todo.bracket", field=k))
     has_ui = p.get("has_ui")
     if has_ui == "yes":
         viz = viz_of(p)
@@ -2347,8 +2364,21 @@ def not_recorded_note(word_id):
     return T("note.not_recorded", word=T(word_id))
 
 
+# A turn that did not come from the user: a message from another session (reason-message) or a background-task notice. The host runs
+# UserPromptSubmit for it too, but it is not the user's input. It must never become last_prompt: --quote, every approval, "finish",
+# the goal answer and the file-name checks all read the user's words from there. Wherever the mark appears, the whole turn is set
+# aside (safe side: a real message wrongly set aside only has to be sent again, a peer message taken as the user's is a hole).
+PEER_TURN = re.compile(r"[<\[]\s*(?:reason-[a-z-]+|task-notification|teammate-message)\b|\[\s*SYSTEM\s+NOTIFICATION", re.I)
+
+
+def is_peer_turn(prompt):
+    return bool(PEER_TURN.search(nfkc(prompt)))
+
+
 def on_prompt(root, event):
     prompt = event.get("prompt") or ""
+    if is_peer_turn(prompt):  # nothing is written: not the language, not the counters, not a pending question
+        return "Reply in: " + reply_lang(root) + "\n" + T("note.peer_turn")
     if not os.path.exists(lang_path(root)) and not os.environ.get("CREATECODEBOX_LANG") and re.search(r"[A-Za-z぀-ヿ㐀-鿿]", prompt):
         set_lang(root, lang.detect(prompt, "en"))
     lang.use(get_lang(root))
